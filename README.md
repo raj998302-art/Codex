@@ -23,6 +23,41 @@ APK stays small and crisp at any resolution.
   funfair, metro, desert) and every board is **proven solvable** by an elimination simulation
   before you play it.
 
+
+## v2.0 feature systems
+
+| System | What it does |
+| --- | --- |
+| **Splash + offline gate** | Branded loading screen; if the device is offline a friendly **NO INTERNET** card offers RETRY / **PLAY OFFLINE** |
+| **Profile** | Editable player name, **8 toon DP avatars** (cap, helmet, shades, headband, crown, headphones, mohawk, beanie), lifetime stats (level, wins, win%, practice) |
+| **Google Play Games sign-in** | PGS v2 silent + interactive sign-in; shows gamer name. Activates fully once the game is registered with Play Games Services in Play Console |
+| **Security (SecureVault)** | Coins / total earnings / No-Ads ownership are stored **checksum-signed** (SHA-256 `value|tag|installSalt`) with a mirrored backup — tampering with SharedPreferences triggers automatic restore from the clean mirror and counts a tamper flag. Grant sizes and balances are hard-capped |
+| **Referral centre** | Deterministic `CJ-XXXXXX` code per install, system share sheet, **+150 coins** welcome bonus, one redemption per device, own-code & duplicate guards |
+| **Practice mode** | Free play entry from home: no coins granted or lost, no level unlocks, no ads — pure learning, with its own practice-win stat |
+| **Offline mode** | `Net` connectivity check drives an OFFLINE pill, banner/shop awareness; 100% of gameplay works without internet |
+| **AAA icon** | Generated glossy toy-car icon with adaptive, round and monochrome variants |
+
+### Honest security note
+
+Client hardening raises the bar, but **real cheat-proofing requires a backend**:
+Play Billing already verifies purchase tokens with Google servers, so purchases
+cannot be faked through the app itself. For unhackable leaderboards / cross-device
+referral crediting, add a small server (e.g. Firebase) that validates receipts and
+scores — the code is structured so `Prefs`/`Leaderboard` can be swapped to remote
+sources without touching the UI.
+
+### Going live with real money
+
+1. **Play Billing** — create products in Play Console matching `BillingManager.PRODUCT_IDS`
+   (`remove_ads` ₹99, `coins_120/400/1000/2500`). Prices fall back to documented defaults
+   until products exist.
+2. **AdMob** — replace the Google TEST ids in `AdsManager` (`BANNER_ID`,
+   `INTERSTITIAL_ID`, `REWARDED_ID`) and the `APPLICATION_ID` meta-data in
+   `AndroidManifest.xml` with your own units; buy `remove_ads` to hide all ads.
+3. **Play Games Services** — link the app in Play Console → Play Games Services →
+   configuration; sign-in then upgrades the local profile automatically.
+4. Replace the debug signing config in `app/build.gradle.kts` with your keystore.
+
 ## Project layout
 
 ```

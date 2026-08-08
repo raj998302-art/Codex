@@ -1,6 +1,5 @@
 package com.codex.carjam.ui
 
-import android.app.Activity
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -21,13 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,24 +36,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.codex.carjam.game.CarColor
 import com.codex.carjam.game.CarType
-import com.codex.carjam.game.DailyRewards
-import com.codex.carjam.game.Events
 import com.codex.carjam.game.LevelTheme
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.Painters
-import com.codex.carjam.monetize.AdsManager
-import com.codex.carjam.monetize.BillingManager
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -66,19 +50,11 @@ import kotlin.math.sin
 fun HomeScreen(
     prefs: Prefs,
     sound: SoundManager,
-    ads: AdsManager,
-    billing: BillingManager,
     onPlay: (Int) -> Unit,
 ) {
     var showLevels by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
-    var showShop by remember { mutableStateOf(false) }
-    var showDaily by remember { mutableStateOf(false) }
-    var showEvents by remember { mutableStateOf(false) }
-    var showRank by remember { mutableStateOf(false) }
     val theme = LevelTheme.entries[(prefs.maxLevel.intValue - 1) % LevelTheme.entries.size]
-    val event = remember { Events.today() }
-    val dailyReady = DailyRewards.canClaim(prefs)
 
     Box(Modifier.fillMaxSize()) {
         HomeBackdrop(theme)
@@ -93,20 +69,16 @@ fun HomeScreen(
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 GearButton { sound.tap(); showSettings = true }
                 Spacer(Modifier.weight(1f))
-                CoinPill(prefs.coins.intValue, onPlus = { sound.tap(); showShop = true })
+                CoinPill(prefs.coins.intValue)
             }
 
-            SpacerH(34.dp)
+            SpacerH(40.dp)
             OutlinedTextC("CAR JAM", 64.dp, fill = Color.White, outline = Color(0xFF20303C))
             OutlinedTextC("SOLVER", 30.dp, fill = Color(0xFFFFD32E), outline = Color(0xFF7A4A00))
             SpacerH(8.dp)
-            Pill(
-                text = "${event.emoji} ${event.title} is LIVE",
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                bg = event.accent.copy(alpha = 0.9f),
-            )
+            Pill("Unblock the traffic • seat every passenger", modifier = Modifier.align(Alignment.CenterHorizontally))
 
-            SpacerH(44.dp)
+            SpacerH(56.dp)
 
             // big round PLAY button
             val interaction = remember { MutableInteractionSource() }
@@ -133,27 +105,14 @@ fun HomeScreen(
                     drawPath(path, Color.White)
                 }
             }
-            SpacerH(14.dp)
+            SpacerH(16.dp)
             Pill(
                 text = "LEVEL ${prefs.maxLevel.intValue}",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 bg = Color.Black.copy(alpha = 0.45f),
             )
 
-            SpacerH(22.dp)
-
-            // quick actions row
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                ActionChip("🛒", "SHOP") { sound.tap(); showShop = true }
-                ActionChip("🎁", "GIFT", badge = dailyReady) { sound.tap(); showDaily = true }
-                ActionChip("📅", "EVENTS") { sound.tap(); showEvents = true }
-                ActionChip("🏆", "RANK") { sound.tap(); showRank = true }
-            }
-
-            SpacerH(16.dp)
+            SpacerH(30.dp)
             SquishyButton(
                 "SELECT LEVEL",
                 onClick = { sound.tap(); showLevels = true },
@@ -163,36 +122,17 @@ fun HomeScreen(
                 textSize = 18.dp,
                 height = 50.dp,
             )
-
             Spacer(Modifier.weight(1f))
-
-            // AdMob banner (hidden when No-Ads pack owned)
-            if (!prefs.removeAds.value) {
-                AndroidView(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding(),
-                    factory = { ctx ->
-                        AdView(ctx).apply {
-                            setAdSize(AdSize.BANNER)
-                            adUnitId = AdsManager.BANNER_ID
-                            loadAd(AdRequest.Builder().build())
-                        }
-                    },
-                )
-            } else {
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Spacer(Modifier.weight(1f))
-                    Pill("Tap cars • match colours • clear the jam", bg = Color.Black.copy(alpha = 0.35f))
-                    Spacer(Modifier.weight(1f))
-                }
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.weight(1f))
+                Pill("Tap cars • match colours • clear the jam", bg = Color.Black.copy(alpha = 0.35f))
+                Spacer(Modifier.weight(1f))
             }
         }
 
-        // ---- dialogs
         if (showLevels) {
             LevelSelectDialog(
                 maxLevel = prefs.maxLevel.intValue,
@@ -209,59 +149,6 @@ fun HomeScreen(
                 onHome = { showSettings = false },
             )
         }
-        if (showShop) {
-            (LocalActivity())?.let { act ->
-                ShopDialog(billing = billing, ads = ads, prefs = prefs, activity = act, onClose = { showShop = false })
-            } ?: run { showShop = false }
-        }
-        if (showDaily) {
-            DailyRewardDialog(
-                prefs = prefs,
-                onClaimed = { sound.coin() },
-                onClose = { showDaily = false },
-            )
-        }
-        if (showEvents) {
-            EventsDialog(onClose = { showEvents = false })
-        }
-        if (showRank) {
-            LeaderboardDialog(prefs = prefs, onClose = { showRank = false })
-        }
-    }
-}
-
-@Composable
-private fun LocalActivity(): Activity? =
-    androidx.compose.ui.platform.LocalContext.current as? Activity
-
-@Composable
-private fun ActionChip(emoji: String, label: String, badge: Boolean = false, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier
-                .size(60.dp)
-                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                .border(2.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                .clickable { onClick() },
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(emoji, style = TextStyle(fontSize = 26.sp))
-            if (badge) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 6.dp, y = (-6).dp)
-                        .size(16.dp)
-                        .background(Color(0xFFFF4757), CircleShape)
-                        .border(2.dp, Color.White, CircleShape),
-                )
-            }
-        }
-        BasicText(
-            text = label,
-            style = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp),
-            modifier = Modifier.padding(top = 4.dp),
-        )
     }
 }
 
@@ -329,7 +216,7 @@ private fun HomeBackdrop(theme: LevelTheme) {
                     cornerRadius = CornerRadius(u * 0.6f),
                 )
                 with(Painters) {
-                    drawCar(x, y, angle, type, color, scale = u / 46f, variant = k)
+                    drawCar(x, y, angle, type, color, scale = u / 46f)
                 }
                 k++
             }
@@ -341,7 +228,7 @@ private fun HomeBackdrop(theme: LevelTheme) {
             val y = h * 0.585f
             val a = if (i % 2 == 0) 90f else 270f
             with(Painters) {
-                drawCar(x, y, a, CarType.SEDAN, palette[(i * 4 + 1) % palette.size], scale = u / 52f, variant = i + 1)
+                drawCar(x, y, a, CarType.SEDAN, palette[(i * 4 + 1) % palette.size], scale = u / 52f)
             }
         }
     }

@@ -42,7 +42,7 @@ object LevelGenerator {
     private val placeR get() = Dim.ARENA_RIGHT - Dim.ARENA_PAD
     private val placeB get() = Dim.ARENA_BOTTOM - Dim.ARENA_PAD
 
-    fun generate(level: Int, mysteryBoost: Int = 0): LevelSpec {
+    fun generate(level: Int): LevelSpec {
         val themes = LevelTheme.entries
         val styles = LayoutStyle.entries
         val theme = themes[(level - 1) % themes.size]
@@ -83,8 +83,8 @@ object LevelGenerator {
             }
 
             // Mystery ("?") cars on later levels – but never among the first escapees.
-            if (level >= 4 || mysteryBoost > 0) {
-                val mysteryCount = min(1 + level / 3 + mysteryBoost, min(order.size / 4, 12))
+            if (level >= 4) {
+                val mysteryCount = min(1 + level / 3, min(order.size / 4, 8))
                 val pool = order.subList((order.size * 0.25f).toInt(), order.size).toMutableList()
                 repeat(mysteryCount) {
                     if (pool.isEmpty()) return@repeat

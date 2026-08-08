@@ -122,11 +122,6 @@ class GameEngine(
     var loseReason = ""
         private set
 
-    // Live-ops modifiers (events / revive)
-    var bonusSlots = 0
-        private set
-    var coinMult = 1f
-
     val cars: List<CarEnt> = spec.cars.map { CarEnt(it) }
     val waiting = ArrayList<PassengerEnt>()
     private val backlog = ArrayList<CarColor>()
@@ -155,27 +150,10 @@ class GameEngine(
 
     fun remainingPassengers(): Int = waiting.size + backlog.size + boardAnims.size
 
-    fun effectiveSlots(): Int = spec.slotCount + bonusSlots
-
-    fun slotCenters(): List<Pt> = Dim.slotCenters(effectiveSlots())
-
-    fun grantBonusSlots(n: Int) {
-        bonusSlots += n
-    }
-
-    /** Second-chance hook (rewarded ad): more slots, straight back to play. */
-    fun revive(extraSlots: Int = 2) {
-        if (result != GameResult.LOST) return
-        bonusSlots += extraSlots
-        result = GameResult.PLAYING
-        lastActionMs = ms
-        onFx(Fx.REVEAL)
-    }
-
     private fun freeSlotIndex(): Int? {
         val used = HashSet<Int>()
         for (c in cars) if (c.slotIdx >= 0 && c.phase != CarPhase.GONE) used.add(c.slotIdx)
-        for (i in 0 until effectiveSlots()) if (!used.contains(i)) return i
+        for (i in 0 until spec.slotCount) if (!used.contains(i)) return i
         return null
     }
 
@@ -223,7 +201,7 @@ class GameEngine(
         val slot = freeSlotIndex() ?: return
         car.slotIdx = slot
         car.phase = CarPhase.EXITING
-        val slotCenter = slotCenters()[slot]
+        val slotCenter = Dim.slotCenters(spec.slotCount)[slot]
         val dir = facingVec(car.angle)
         val dist = exitDistance(car.pos, dir, Dim.arenaRect, car.hl + car.hw)
         val p0 = car.pos
@@ -259,7 +237,7 @@ class GameEngine(
         car.onAnimEnd = {
             car.phase = CarPhase.GONE
             car.slotIdx = -1
-            spawnCoins(car.pos, 5, maxOf(1, (2f * coinMult).toInt()))
+            spawnCoins(car.pos, 5, 2)
         }
         onFx(Fx.DEPART)
         lastActionMs = ms

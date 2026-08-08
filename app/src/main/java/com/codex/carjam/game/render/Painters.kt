@@ -25,7 +25,6 @@ import com.codex.carjam.game.GameResult
 import com.codex.carjam.game.LevelTheme
 import kotlin.math.cos
 import kotlin.math.exp
-import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -168,23 +167,20 @@ object Painters {
 
         val occupied = HashSet<Int>()
         for (c in engine.cars) if (c.slotIdx >= 0 && c.phase != CarPhase.GONE) occupied.add(c.slotIdx)
-        val centers = engine.slotCenters()
-        val spacing = if (centers.size > 1) centers[1].x - centers[0].x else 200f
-        val halfW = min(66f, spacing * 0.44f)
-        val halfH = 108f
+        val centers = Dim.slotCenters(engine.spec.slotCount)
         val phase = -(engine.ms / 40f)
         centers.forEachIndexed { i, c ->
             if (!occupied.contains(i)) {
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.10f),
-                    topLeft = Offset(c.x - halfW, c.y - halfH),
-                    size = Size(halfW * 2, halfH * 2),
+                    topLeft = Offset(c.x - 66f, c.y - 108f),
+                    size = Size(132f, 216f),
                     cornerRadius = CornerRadius(26f),
                 )
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.72f),
-                    topLeft = Offset(c.x - halfW, c.y - halfH),
-                    size = Size(halfW * 2, halfH * 2),
+                    topLeft = Offset(c.x - 66f, c.y - 108f),
+                    size = Size(132f, 216f),
                     cornerRadius = CornerRadius(26f),
                     style = Stroke(width = 7f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(24f, 20f), phase)),
                 )
@@ -492,14 +488,13 @@ object Painters {
         if (popAge in 0f..500f) {
             scale = 1f + 0.30f * exp(-popAge / 140f) * sin(popAge / 36f)
         }
-        drawCar(car.x, car.y, angle, car.type, car.color, scale, mystery = !car.revealed, variant = car.spec.id)
+        drawCar(car.x, car.y, angle, car.type, car.color, scale, mystery = !car.revealed)
     }
 
     /**
-     * The premium toon car: oval shadow, chrome wheels, glossy capsule body with rim
-     * light + roof dome, trapezoid glass with shine sweep, mirrors, bumpers, and the
-     * iconic embossed white arrow. Local space points up (−Y); caller rotates.
-     * [variant] deterministically dresses up some sedans (taxi sign, etc.).
+     * The toon car itself: soft shadow, wheels, glossy capsule body, windshield,
+     * roof panel with the iconic white arrow, bumper lights — like the Play Store art.
+     * Local space points up (−Y); caller rotates by facing angle.
      */
     fun DrawScope.drawCar(
         cx: Float,
@@ -511,45 +506,32 @@ object Painters {
         alpha: Float = 1f,
         mystery: Boolean = false,
         arrowVisible: Boolean = true,
-        variant: Int = 0,
     ) {
         val hl = type.len / 2f
         val hw = type.wid / 2f
         val rr = hw * 0.55f
-        val glassDark = Color(0xFF1B2C45)
-        val glassLight = Color(0xFF4A6E9E)
-        val isTaxi = type == CarType.SEDAN && variant % 6 == 1
 
         withTransform({
             translate(cx, cy)
             rotate(angleDeg, Offset.Zero)
             scale(scale, scale, Offset.Zero)
         }) {
-            // soft oval drop shadow
-            drawOval(
-                color = Color.Black.copy(alpha = 0.30f * alpha),
-                topLeft = Offset(-hw - 6f, -hl + 6f),
-                size = Size(hw * 2 + 12f, hl * 2 + 2f),
+            // drop shadow
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.28f * alpha),
+                topLeft = Offset(-hw - 3f, -hl + 4f),
+                size = Size(hw * 2 + 10f, hl * 2 + 8f),
+                cornerRadius = CornerRadius(rr),
             )
-            // wheels with hubcaps
+            // wheels
             val wy = hl * 0.55f
             for (wx in listOf(-hw - 3f, hw - 9f)) {
                 for (yy in listOf(-wy, wy)) {
                     drawRoundRect(
-                        color = Color(0xFF1C2027).copy(alpha = alpha),
-                        topLeft = Offset(wx, yy - 16f),
-                        size = Size(12f, 32f),
+                        color = Color(0xFF23272E).copy(alpha = alpha),
+                        topLeft = Offset(wx, yy - 15f),
+                        size = Size(12f, 30f),
                         cornerRadius = CornerRadius(6f),
-                    )
-                    drawCircle(
-                        color = Color(0xFF6E7680).copy(alpha = alpha),
-                        radius = 5.5f,
-                        center = Offset(wx + 6f, yy),
-                    )
-                    drawCircle(
-                        color = Color(0xFFAEB6C0).copy(alpha = alpha),
-                        radius = 2f,
-                        center = Offset(wx + 6f, yy),
                     )
                 }
             }
@@ -560,183 +542,71 @@ object Painters {
                 size = Size(hw * 2 + 4f, hl * 2 + 4f),
                 cornerRadius = CornerRadius(rr + 2f),
             )
-            // body diagonal gradient
+            // body gradient
             drawRoundRect(
                 brush = Brush.linearGradient(
-                    colors = listOf(mixWhite(color.body, 0.18f), color.body, color.dark),
+                    colors = listOf(color.body, color.dark),
                     start = Offset(-hw, -hl),
-                    end = Offset(hw * 0.9f, hl),
+                    end = Offset(hw * 0.8f, hl),
                 ),
                 alpha = alpha,
                 topLeft = Offset(-hw, -hl),
                 size = Size(hw * 2, hl * 2),
                 cornerRadius = CornerRadius(rr),
             )
-            // ambient occlusion at the rear
+            // glossy top sheen
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.20f * alpha)),
-                    startY = hl * 0.35f,
-                    endY = hl,
-                ),
-                topLeft = Offset(-hw, hl * 0.35f),
-                size = Size(hw * 2, hl * 0.65f),
-                cornerRadius = CornerRadius(rr),
-            )
-            // top sheen + rim light
-            drawRoundRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.White.copy(alpha = 0.38f * alpha), Color.Transparent),
+                    colors = listOf(Color.White.copy(alpha = 0.34f * alpha), Color.Transparent),
                     startY = -hl,
-                    endY = -hl * 0.25f,
+                    endY = -hl * 0.2f,
                 ),
                 topLeft = Offset(-hw + 7f, -hl + 5f),
-                size = Size(hw * 2 - 14f, hl * 0.8f),
+                size = Size(hw * 2 - 14f, hl * 0.85f),
                 cornerRadius = CornerRadius(rr - 8f),
             )
+            // windshield (front = up)
+            val wsW = hw * 0.78f
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.20f * alpha),
-                topLeft = Offset(-hw, -hl),
-                size = Size(hw * 2, hl * 2),
-                cornerRadius = CornerRadius(rr),
-                style = Stroke(4f),
-            )
-            // roof dome highlight
-            drawOval(
-                color = Color.White.copy(alpha = 0.13f * alpha),
-                topLeft = Offset(-hw * 0.66f, -hl * 0.52f),
-                size = Size(hw * 1.32f, hl * 0.72f),
-            )
-            // bumpers
-            drawRoundRect(
-                color = color.deep.copy(alpha = 0.26f * alpha),
-                topLeft = Offset(-hw + 3f, -hl + 1f),
-                size = Size(hw * 2 - 6f, 9f),
-                cornerRadius = CornerRadius(5f),
+                color = Color(0xFF24344E).copy(alpha = 0.95f * alpha),
+                topLeft = Offset(-wsW / 2f, -hl + 20f),
+                size = Size(wsW, 34f),
+                cornerRadius = CornerRadius(12f),
             )
             drawRoundRect(
-                color = color.deep.copy(alpha = 0.26f * alpha),
-                topLeft = Offset(-hw + 3f, hl - 10f),
-                size = Size(hw * 2 - 6f, 9f),
-                cornerRadius = CornerRadius(5f),
+                color = Color.White.copy(alpha = 0.22f * alpha),
+                topLeft = Offset(-wsW / 2f + 6f, -hl + 24f),
+                size = Size(wsW * 0.38f, 26f),
+                cornerRadius = CornerRadius(8f),
             )
-            // windshield trapezoid with gradient + shine sweep
-            val wsW = hw * 0.80f
-            val wsTop = -hl + 15f
-            val wsPath = Path().apply {
-                moveTo(-wsW / 2f, wsTop + 32f)
-                lineTo(-wsW * 0.36f, wsTop)
-                lineTo(wsW * 0.36f, wsTop)
-                lineTo(wsW / 2f, wsTop + 32f)
-                close()
-            }
-            drawPath(
-                wsPath,
-                Brush.verticalGradient(
-                    listOf(glassLight.copy(alpha = 0.9f * alpha), glassDark.copy(alpha = 0.97f * alpha)),
-                    startY = wsTop,
-                    endY = wsTop + 32f,
-                ),
-            )
-            withTransform({ rotate(-24f, Offset(0f, wsTop + 16f)) }) {
-                drawRect(
-                    color = Color.White.copy(alpha = 0.26f * alpha),
-                    topLeft = Offset(-9f, wsTop - 8f),
-                    size = Size(16f, 46f),
-                )
-            }
             // rear window
-            val rwW = wsW * 0.86f
             drawRoundRect(
-                brush = Brush.verticalGradient(
-                    listOf(glassLight.copy(alpha = 0.7f * alpha), glassDark.copy(alpha = 0.92f * alpha)),
-                    startY = hl - 48f,
-                    endY = hl - 20f,
-                ),
-                topLeft = Offset(-rwW / 2f, hl - 48f),
-                size = Size(rwW, 28f),
+                color = Color(0xFF24344E).copy(alpha = 0.85f * alpha),
+                topLeft = Offset(-wsW * 0.42f, hl - 46f),
+                size = Size(wsW * 0.84f, 26f),
                 cornerRadius = CornerRadius(10f),
             )
-            // side glass strips
-            for (sx in listOf(-1f, 1f)) {
-                drawRoundRect(
-                    color = glassDark.copy(alpha = 0.5f * alpha),
-                    topLeft = Offset(sx * (hw - 12f) - 5f, -hl + 52f),
-                    size = Size(10f, hl * 0.42f),
-                    cornerRadius = CornerRadius(5f),
-                )
-            }
-            // type-specific dressing
-            when (type) {
-                CarType.BUS -> {
-                    drawRoundRect(
-                        color = Color(0xFFFFC94D).copy(alpha = 0.95f * alpha),
-                        topLeft = Offset(-wsW * 0.53f, -hl + 5f),
-                        size = Size(wsW * 1.06f, 9f),
-                        cornerRadius = CornerRadius(4f),
-                    )
-                    for (i in 0 until 3) {
-                        val y0 = -hl + 60f + i * 42f
-                        for (sx in listOf(-1f, 1f)) {
-                            drawRoundRect(
-                                color = color.deep.copy(alpha = 0.7f * alpha),
-                                topLeft = Offset(sx * (hw - 15f) - 9f, y0),
-                                size = Size(18f, 30f),
-                                cornerRadius = CornerRadius(6f),
-                            )
-                            drawRoundRect(
-                                color = Color(0xFF9FC3E8).copy(alpha = 0.9f * alpha),
-                                topLeft = Offset(sx * (hw - 15f) - 6f, y0 + 3f),
-                                size = Size(12f, 24f),
-                                cornerRadius = CornerRadius(4f),
-                            )
-                        }
-                    }
-                    drawRoundRect(
-                        color = color.deep.copy(alpha = 0.20f * alpha),
-                        topLeft = Offset(-hw * 0.38f, hl - 84f),
-                        size = Size(hw * 0.76f, 26f),
-                        cornerRadius = CornerRadius(10f),
-                    )
-                }
-
-                CarType.VAN -> {
+            // bus side windows + stripe
+            if (type == CarType.BUS) {
+                for (i in 0 until 3) {
+                    val y0 = -hl + 66f + i * 44f
                     for (sx in listOf(-1f, 1f)) {
                         drawRoundRect(
-                            color = color.deep.copy(alpha = 0.25f * alpha),
-                            topLeft = Offset(sx * (hw - 8f) - 1.5f, -hl * 0.18f),
-                            size = Size(3f, hl * 0.66f),
-                            cornerRadius = CornerRadius(1.5f),
-                        )
-                    }
-                }
-
-                CarType.SEDAN -> {
-                    if (isTaxi) {
-                        drawRoundRect(
-                            color = color.deep.copy(alpha = 0.8f * alpha),
-                            topLeft = Offset(-15f, -hl + 62f),
-                            size = Size(30f, 17f),
+                            color = Color(0xFF24344E).copy(alpha = 0.55f * alpha),
+                            topLeft = Offset(sx * (hw - 13f) - 7f, y0),
+                            size = Size(14f, 30f),
                             cornerRadius = CornerRadius(6f),
                         )
-                        drawRoundRect(
-                            color = Color(0xFFFFF3C4).copy(alpha = alpha),
-                            topLeft = Offset(-12.5f, -hl + 64f),
-                            size = Size(25f, 13f),
-                            cornerRadius = CornerRadius(5f),
-                        )
                     }
                 }
             }
-            // mirrors
-            for (sx in listOf(-1f, 1f)) {
-                drawRoundRect(
-                    color = color.deep.copy(alpha = alpha),
-                    topLeft = Offset(sx * (hw + 1f) - 4f, -hl + 28f),
-                    size = Size(8f, 15f),
-                    cornerRadius = CornerRadius(4f),
-                )
-            }
+            // roof panel
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.10f * alpha),
+                topLeft = Offset(-hw * 0.56f, -hl * 0.40f),
+                size = Size(hw * 1.12f, hl * 0.94f),
+                cornerRadius = CornerRadius(18f),
+            )
             // headlights + taillights
             for (sx in listOf(-1f, 1f)) {
                 drawRoundRect(
@@ -745,11 +615,6 @@ object Painters {
                     size = Size(18f, 10f),
                     cornerRadius = CornerRadius(5f),
                 )
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.8f * alpha),
-                    radius = 2.5f,
-                    center = Offset(sx * (hw - 20f) - 3f, -hl + 7f),
-                )
                 drawRoundRect(
                     color = Color(0xFFFF6B57).copy(alpha = alpha),
                     topLeft = Offset(sx * (hw - 20f) - 9f, hl - 14f),
@@ -757,10 +622,11 @@ object Painters {
                     cornerRadius = CornerRadius(4f),
                 )
             }
-            // embossed roof arrow
+            // roof arrow
             if (arrowVisible) {
                 val aCol = if (mystery) Color(0xFFE9EDF1) else Color.White
                 val arrow = Path().apply {
+                    // tip at front
                     moveTo(0f, -hl * 0.58f)
                     lineTo(20f, -hl * 0.58f + 26f)
                     lineTo(8f, -hl * 0.58f + 26f)
@@ -770,16 +636,13 @@ object Painters {
                     lineTo(-20f, -hl * 0.58f + 26f)
                     close()
                 }
-                withTransform({ translate(0f, 6f) }) {
+                withTransform({ translate(0f, 5f) }) {
                     drawPath(arrow, color.deep.copy(alpha = 0.55f * alpha))
                 }
-                drawPath(arrow, Color(0xFF1B1F26).copy(alpha = 0.35f * alpha), style = Stroke(6f))
                 drawPath(arrow, aCol.copy(alpha = 0.97f * alpha))
-                withTransform({ translate(0f, -3f) }) {
-                    drawPath(arrow, Color.White.copy(alpha = 0.55f * alpha), style = Stroke(2.5f))
-                }
             }
             if (mystery) {
+                // dark veil + "?"
                 drawRoundRect(
                     color = Color(0xFF3C434B).copy(alpha = 0.30f * alpha),
                     topLeft = Offset(-hw, -hl),
@@ -791,91 +654,36 @@ object Painters {
         }
     }
 
-    /** Premium toy "pawn" passenger: feet, capsule body with rim light, arms, glossy head + hair cap. */
+    /** Toy "pawn" passenger, top-down: capsule body + glossy head. */
     fun DrawScope.drawPassenger(x: Float, y: Float, color: CarColor, scale: Float = 1f) {
         withTransform({
             translate(x, y)
             scale(scale, scale, Offset.Zero)
         }) {
-            // ground shadow
             drawOval(
-                color = Color.Black.copy(alpha = 0.24f),
-                topLeft = Offset(-16f, 14f),
-                size = Size(32f, 15f),
+                color = Color.Black.copy(alpha = 0.22f),
+                topLeft = Offset(-15f, 14f),
+                size = Size(30f, 14f),
             )
-            // feet
-            for (fx in listOf(-7f, 5f)) {
-                drawOval(
-                    color = color.deep.copy(alpha = 0.95f),
-                    topLeft = Offset(fx, 18f),
-                    size = Size(9f, 8f),
-                )
-            }
-            // body capsule
             drawRoundRect(
-                brush = Brush.verticalGradient(
-                    listOf(mixWhite(color.body, 0.22f), color.body, color.dark),
-                    startY = -14f,
-                    endY = 24f,
-                ),
+                brush = Brush.verticalGradient(listOf(color.body, color.dark), startY = -14f, endY = 22f),
                 topLeft = Offset(-14f, -14f),
-                size = Size(28f, 39f),
+                size = Size(28f, 38f),
                 cornerRadius = CornerRadius(14f),
             )
-            // right-side shade + left rim light
-            drawRoundRect(
-                color = color.deep.copy(alpha = 0.28f),
-                topLeft = Offset(2f, -14f),
-                size = Size(12f, 39f),
-                cornerRadius = CornerRadius(14f),
-            )
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.22f),
-                topLeft = Offset(-14f, -12f),
-                size = Size(8f, 34f),
-                cornerRadius = CornerRadius(6f),
-            )
-            // arms
-            for (sx in listOf(-1f, 1f)) {
-                withTransform({ rotate(sx * 14f, Offset(sx * 16f, 4f)) }) {
-                    drawRoundRect(
-                        color = color.dark.copy(alpha = 0.95f),
-                        topLeft = Offset(sx * 16f - 4f, -2f),
-                        size = Size(9f, 17f),
-                        cornerRadius = CornerRadius(5f),
-                    )
-                }
-            }
-            // head with glossy dome
             drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(mixWhite(color.body, 0.55f), color.body, color.dark),
-                    center = Offset(-4f, -18f),
-                    radius = 30f,
+                    listOf(mixWhite(color.body, 0.5f), color.body),
+                    center = Offset(-3f, -14f),
+                    radius = 26f,
                 ),
-                radius = 13.5f,
+                radius = 13f,
                 center = Offset(0f, -14f),
             )
-            // hair cap (top arc in the deep shade)
-            drawArc(
-                color = color.deep.copy(alpha = 0.55f),
-                startAngle = 180f,
-                sweepAngle = 180f,
-                useCenter = false,
-                topLeft = Offset(-9.5f, -23.5f),
-                size = Size(19f, 19f),
-                style = Stroke(6f),
-            )
-            // sparkle on the head
             drawCircle(
-                color = Color.White.copy(alpha = 0.8f),
+                color = Color.White.copy(alpha = 0.75f),
                 radius = 3.6f,
                 center = Offset(-4f, -18f),
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = 0.5f),
-                radius = 1.6f,
-                center = Offset(3f, -12f),
             )
         }
     }

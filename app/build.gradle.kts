@@ -64,7 +64,9 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
-    // Monetization deps re-added after CI bisect (billing/ads libs removed temporarily)
+    // Monetization: Google Play Billing + AdMob (test IDs wired in; see README)
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("com.google.android.gms:play-services-ads:23.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

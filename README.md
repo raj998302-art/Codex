@@ -68,10 +68,30 @@ gradle assembleDebug      # debug APK in app/build/outputs/apk/debug
 gradle assembleRelease    # release APK in app/build/outputs/apk/release
 ```
 
+## Monetization & live-ops
+
+The game ships with a full money-making stack, wired with **Google TEST credentials** so it is
+safe to run anywhere. Swap in your real credentials before publishing:
+
+| Feature | Where to configure |
+| --- | --- |
+| **No-Ads pack (₹99)** | Play Console product id `remove_ads` (non-consumable). Thumbnail: `app/src/main/res/drawable-nodpi/pack_no_ads.png` |
+| **Coin packs ₹29–₹299** | Play Console products `coins_120`, `coins_400`, `coins_1000`, `coins_2500` (consumables) |
+| **AdMob banner / interstitial / rewarded** | Replace test ids in `AndroidManifest.xml` (`APPLICATION_ID`) and `monetize/AdsManager.kt` |
+| **Rewarded revives & free coins** | Works out of the box (`REVIVE ▶ AD` on game over, `FREE +50 COINS` in shop) |
+| **Daily events** | `game/Events.kt` — Coin Rush ×2, Mystery Mayhem, Slot Sale, … rotates by weekday |
+| **Weekly leaderboard** | `game/Leaderboard.kt` — offline 50-player board; swap `weeklyBoard()` for Play Games Services later |
+| **Daily rewards** | `game/DailyRewards.kt` — 7-day streak calendar, day-7 mega prize |
+
+Billing and ads degrade gracefully: without Play services or products created, buttons simply
+show their default INR price and purchases/ads are inert — nothing crashes.
+
 ## Tech notes
 
 * Kotlin 2.0.21, AGP 8.5.2, Compose BOM 2024.09.03, minSdk 24 / targetSdk 34.
 * Portrait-locked single activity; scene is letterboxed from a 1080×2280 design space.
 * Blocking check uses exact **swept SAT** collision (convex hull of the slid body), identical in
   spirit to the original game's slide-out rule.
-* Sounds are synthesised at runtime — the project contains **zero binary assets**.
+* All vehicle/NPC art is rendered procedurally (premium glossy cars with glass, hubcaps,
+  mirrors, taxi/bus variants; pod passengers with arms, feet and hair caps) — plus one
+  AI-designed pack thumbnail. Everything else stays asset-free.

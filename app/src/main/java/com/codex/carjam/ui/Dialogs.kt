@@ -143,7 +143,13 @@ fun WinDialog(level: Int, coinsEarned: Int, onNext: () -> Unit, onHome: () -> Un
 }
 
 @Composable
-fun LoseDialog(reason: String, onRetry: () -> Unit, onHome: () -> Unit) {
+fun LoseDialog(
+    reason: String,
+    canRevive: Boolean,
+    onRevive: () -> Unit,
+    onRetry: () -> Unit,
+    onHome: () -> Unit,
+) {
     DialogOverlay {
         PanelCard {
             DialogTitle("OUT OF MOVES!", fill = Color(0xFFFF6B57), outline = Color(0xFF7A1610))
@@ -153,6 +159,18 @@ fun LoseDialog(reason: String, onRetry: () -> Unit, onHome: () -> Unit) {
                 style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
             )
             SpacerH(18.dp)
+            SquishyButton(
+                "REVIVE  ▶ AD   (+2 SLOTS)",
+                onClick = onRevive,
+                top = Color(0xFF58D76B),
+                bottom = Color(0xFF28A745),
+            )
+            SpacerH(6.dp)
+            BasicText(
+                text = if (canRevive) "ad ready" else "free revive, no ad needed",
+                style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 11.sp),
+            )
+            SpacerH(8.dp)
             SquishyButton(
                 "TRY AGAIN",
                 onClick = onRetry,

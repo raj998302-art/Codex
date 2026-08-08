@@ -1,5 +1,6 @@
 package com.codex.carjam.ui
 
+import android.app.Activity
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -29,6 +30,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.codex.carjam.game.Dim
+import com.codex.carjam.game.Events
 import com.codex.carjam.game.Fx
 import com.codex.carjam.game.GameEngine
 import com.codex.carjam.game.GameResult
@@ -36,6 +38,8 @@ import com.codex.carjam.game.LevelGenerator
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.Painters
+import com.codex.carjam.monetize.AdsManager
+import com.codex.carjam.monetize.BillingManager
 import kotlin.math.min
 
 @Composable
@@ -44,11 +48,14 @@ fun GameScreen(
     attempt: Int,
     prefs: Prefs,
     sound: SoundManager,
+    ads: AdsManager,
+    billing: BillingManager,
     onHome: () -> Unit,
     onNext: () -> Unit,
     onRetry: () -> Unit,
 ) {
     val view = LocalView.current
+    val event = remember { Events.today() }
 
     val fx = remember(sound, prefs, view) {
         { f: Fx ->
@@ -70,7 +77,8 @@ fun GameScreen(
         }
     }
 
-    val spec = remember(level) { LevelGenerator.generate(level) }
+    val winBonus = (40 * event.coinMult).toInt()
+    val spec = remember(level, attempt) { LevelGenerator.generate(level, mysteryBoost = event.mysteryBoost) }
     val engine = remember(level, attempt) {
         GameEngine(
             spec = spec,
@@ -78,9 +86,12 @@ fun GameScreen(
             onCoinLanded = { v -> prefs.addCoins(v) },
             onWin = {
                 prefs.unlockLevel(level + 1)
-                prefs.addCoins(40)
+                prefs.addCoins(winBonus)
             },
-        )
+        ).apply {
+            coinMult = event.coinMult
+            grantBonusSlots(event.bonusSlots)
+        }
     }
 
     LaunchedEffect(engine) {
@@ -98,6 +109,7 @@ fun GameScreen(
     BackHandler { onHome() }
 
     var showSettings by remember { mutableStateOf(false) }
+    var showShop by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF0E1B26))) {
         var viewSize by remember { mutableStateOf(IntSize(1, 1)) }
@@ -136,7 +148,18 @@ fun GameScreen(
                 Spacer(Modifier.weight(1f))
                 Pill("Level $level", bg = Color.Black.copy(alpha = 0.55f))
                 Spacer(Modifier.weight(1f))
-                CoinPill(prefs.coins.intValue, onPlus = { sound.coin() })
+                CoinPill(prefs.coins.intValue, onPlus = { showShop = true; sound.coin() })
+            }
+            Row(
+                Modifier.padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.weight(1f))
+                Pill(
+                    "${event.emoji} ${event.title}",
+                    bg = event.accent.copy(alpha = 0.85f),
+                )
+                Spacer(Modifier.weight(1f))
             }
         }
 
@@ -146,14 +169,26 @@ fun GameScreen(
         if (result == GameResult.WON && engine.resultAge() > 900f) {
             WinDialog(
                 level = level,
-                coinsEarned = engine.coinsEarned + 40,
-                onNext = onNext,
+                coinsEarned = engine.coinsEarned + winBonus,
+                onNext = {
+                    (view.context as? Activity)?.let { act -> ads.maybeShowInterstitial(act, level) }
+                    onNext()
+                },
                 onHome = onHome,
             )
         }
         if (result == GameResult.LOST && engine.resultAge() > 600f) {
             LoseDialog(
                 reason = engine.loseReason,
+                canRevive = ads.rewardedReady.value,
+                onRevive = {
+                    val act = view.context as? Activity
+                    if (act != null) {
+                        ads.showRewarded(act, onReward = { engine.revive(2) })
+                    } else {
+                        engine.revive(2)
+                    }
+                },
                 onRetry = { onRetry() },
                 onHome = onHome,
             )
@@ -172,6 +207,20 @@ fun GameScreen(
                     onHome()
                 },
             )
+        }
+        if (showShop) {
+            val act = view.context as? Activity
+            if (act != null) {
+                ShopDialog(
+                    billing = billing,
+                    ads = ads,
+                    prefs = prefs,
+                    activity = act,
+                    onClose = { showShop = false },
+                )
+            } else {
+                showShop = false
+            }
         }
     }
 }

@@ -179,6 +179,15 @@ fun CoinIcon(sizeDp: Dp = 26.dp) {
     }
 }
 
+/** Toon profile avatar (see Painters.drawAvatar for the 8 styles). */
+@Composable
+fun AvatarIcon(id: Int, sizeDp: Dp = 42.dp, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(sizeDp)) {
+        val s = size.width
+        with(Painters) { drawAvatar(id, s / 2f, s / 2f, s * 0.48f) }
+    }
+}
+
 @Composable
 fun CoinPill(coins: Int, modifier: Modifier = Modifier, onPlus: () -> Unit = {}) {
     Row(

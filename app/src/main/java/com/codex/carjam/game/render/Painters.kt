@@ -909,6 +909,129 @@ object Painters {
         drawCircle(color = Color(0xFFB8860B).copy(alpha = 0.85f), radius = r * 0.62f, center = Offset(x, y), style = Stroke(r * 0.14f))
     }
 
+    private const val AV = 8
+    private val AV_BG = listOf(Color(0xFFFF6B6B), Color(0xFF4D96FF), Color(0xFF555555), Color(0xFF6BCB77), Color(0xFFFFD93D), Color(0xFFFF9F45), Color(0xFF4DD0E1), Color(0xFFFF6FB5))
+    private val AV_SKIN = listOf(Color(0xFFFFDDB8), Color(0xFFF1C27D), Color(0xFFDB9E68), Color(0xFFB97F53), Color(0xFFFFE3C4), Color(0xFFE0AC69), Color(0xFFC68642), Color(0xFFFFD1A1))
+    private val AV_HAIR = listOf(Color(0xFF5B3A29), Color(0xFF3A2E39), Color(0xFF2B2B33), Color(0xFF6B4226), Color(0xFF3D3D3D), Color(0xFF4A2C2A), Color(0xFF22252D), Color(0xFF7A4A12))
+
+    /**
+     * Outlined profile-avatar head on a coloured plate; [id] deterministically
+     * picks one of 8 dressed-up styles (cap / helmet / shades / headband /
+     * crown / headphones / mohawk / beanie).
+     */
+    fun DrawScope.drawAvatar(id: Int, cx: Float, cy: Float, r: Float) {
+        val v = ((id % AV) + AV) % AV
+        val bg = AV_BG[v]
+        val skin = AV_SKIN[v]
+        val hair = AV_HAIR[v]
+        val hy = cy + r * 0.14f
+        val hr = r * 0.55f
+        val ey = hy - hr * 0.10f
+        val ex = hr * 0.36f
+
+        // plate
+        drawCircle(bg, radius = r, center = Offset(cx, cy))
+        drawCircle(mixWhite(bg, 0.30f), radius = r * 0.80f, center = Offset(cx, cy))
+        // soft shadow + ears + head
+        drawCircle(Color.Black.copy(alpha = 0.18f), radius = hr + r * 0.04f, center = Offset(cx, hy + r * 0.05f))
+        for (sx in listOf(-1f, 1f)) drawCircle(skin, radius = hr * 0.20f, center = Offset(cx + sx * hr * 0.92f, hy + hr * 0.05f))
+        drawCircle(skin, radius = hr, center = Offset(cx, hy))
+        // eyes (variants 1 & 2 wear visor/shades instead)
+        if (v != 1 && v != 2) {
+            for (sx in listOf(-1f, 1f)) {
+                drawCircle(Color.White, radius = hr * 0.17f, center = Offset(cx + sx * ex, ey))
+                drawCircle(Color(0xFF2B2B33), radius = hr * 0.085f, center = Offset(cx + sx * ex, ey + hr * 0.03f))
+            }
+        }
+        // smile
+        drawArc(
+            color = Color(0xFF7C4A21),
+            startAngle = 25f,
+            sweepAngle = 130f,
+            useCenter = false,
+            topLeft = Offset(cx - hr * 0.30f, hy + hr * 0.16f),
+            size = Size(hr * 0.60f, hr * 0.42f),
+            style = Stroke(width = r * 0.055f),
+        )
+        // dressing
+        when (v) {
+            0 -> { // red speed cap
+                drawArc(Color(0xFFE63946), 180f, 180f, true, Offset(cx - hr, hy - hr * 1.12f), Size(hr * 2f, hr * 1.35f))
+                drawRoundRect(Color(0xFFC1121F), Offset(cx - hr * 0.85f, hy - hr * 0.34f), Size(hr * 1.7f, hr * 0.20f), CornerRadius(hr * 0.10f))
+                drawCircle(Color(0xFFFFD32E), radius = hr * 0.14f, center = Offset(cx, hy - hr * 0.72f))
+            }
+
+            1 -> { // racer helmet + visor
+                drawArc(Color(0xFF2D6A9F), 180f, 180f, true, Offset(cx - hr * 1.02f, hy - hr * 1.14f), Size(hr * 2.04f, hr * 1.75f))
+                drawRoundRect(Color(0xFF9FD8FF), Offset(cx - hr * 0.80f, ey - hr * 0.22f), Size(hr * 1.6f, hr * 0.52f), CornerRadius(hr * 0.22f))
+                drawRoundRect(Color.White.copy(alpha = 0.75f), Offset(cx - hr * 0.62f, ey - hr * 0.14f), Size(hr * 0.55f, hr * 0.16f), CornerRadius(hr * 0.08f))
+            }
+
+            2 -> { // mop hair + cool shades
+                drawArc(hair, 180f, 180f, true, Offset(cx - hr, hy - hr * 1.10f), Size(hr * 2f, hr * 1.30f))
+                drawRoundRect(Color(0xFF22252D), Offset(cx - hr * 0.74f, ey - hr * 0.16f), Size(hr * 1.48f, hr * 0.34f), CornerRadius(hr * 0.13f))
+                drawRoundRect(Color(0xFF9FC3E8).copy(alpha = 0.8f), Offset(cx - hr * 0.64f, ey - hr * 0.10f), Size(hr * 0.52f, hr * 0.20f), CornerRadius(hr * 0.08f))
+            }
+
+            3 -> { // hair + golden headband
+                drawArc(hair, 180f, 180f, true, Offset(cx - hr, hy - hr * 1.08f), Size(hr * 2f, hr * 1.25f))
+                drawRoundRect(Color(0xFFFFD32E), Offset(cx - hr, hy - hr * 0.62f), Size(hr * 2f, hr * 0.24f), CornerRadius(hr * 0.12f))
+                drawCircle(Color(0xFFFFF0A8), radius = hr * 0.10f, center = Offset(cx, hy - hr * 0.50f))
+            }
+
+            4 -> { // champion crown
+                drawArc(hair, 180f, 180f, true, Offset(cx - hr, hy - hr * 1.05f), Size(hr * 2f, hr * 1.2f))
+                val base = hy - hr * 1.02f
+                val crown = Path().apply {
+                    moveTo(cx - hr * 0.55f, base)
+                    lineTo(cx - hr * 0.55f, base - hr * 0.42f)
+                    lineTo(cx - hr * 0.28f, base - hr * 0.18f)
+                    lineTo(cx, base - hr * 0.52f)
+                    lineTo(cx + hr * 0.28f, base - hr * 0.18f)
+                    lineTo(cx + hr * 0.55f, base - hr * 0.42f)
+                    lineTo(cx + hr * 0.55f, base)
+                    close()
+                }
+                drawPath(crown, Color(0xFFFFC93C))
+                drawPath(crown, Color(0xFFB8860B), style = Stroke(width = r * 0.03f))
+                drawCircle(Color(0xFFFF6B6B), radius = hr * 0.07f, center = Offset(cx, base - hr * 0.26f))
+            }
+
+            5 -> { // headphones
+                drawArc(hair, 180f, 180f, true, Offset(cx - hr, hy - hr * 1.06f), Size(hr * 2f, hr * 1.25f))
+                drawArc(Color(0xFF39424E), 180f, 180f, false, Offset(cx - hr * 1.02f, hy - hr * 1.02f), Size(hr * 2.04f, hr * 1.6f), style = Stroke(width = r * 0.09f))
+                for (sx in listOf(-1f, 1f)) {
+                    drawRoundRect(Color(0xFF39424E), Offset(cx + sx * hr * 1.0f - r * 0.11f, hy - hr * 0.25f), Size(r * 0.22f, hr * 0.75f), CornerRadius(r * 0.10f))
+                    drawRoundRect(Color(0xFF9AA5B1), Offset(cx + sx * hr * 1.0f - r * 0.055f, hy - hr * 0.10f), Size(r * 0.11f, hr * 0.45f), CornerRadius(r * 0.05f))
+                }
+            }
+
+            6 -> { // pink mohawk
+                drawArc(hair, 180f, 180f, true, Offset(cx - hr, hy - hr * 1.00f), Size(hr * 2f, hr * 1.05f))
+                val mohawk = Path().apply {
+                    moveTo(cx - hr * 0.22f, hy - hr * 0.78f)
+                    lineTo(cx - hr * 0.10f, hy - hr * 1.55f)
+                    lineTo(cx + hr * 0.06f, hy - hr * 1.05f)
+                    lineTo(cx + hr * 0.16f, hy - hr * 1.70f)
+                    lineTo(cx + hr * 0.26f, hy - hr * 0.80f)
+                    close()
+                }
+                drawPath(mohawk, Color(0xFFFF3EA5))
+            }
+
+            else -> { // propeller beanie
+                drawArc(Color(0xFF4D96FF), 180f, 180f, true, Offset(cx - hr, hy - hr * 1.10f), Size(hr * 2f, hr * 1.30f))
+                drawRoundRect(Color(0xFFFFD32E), Offset(cx - r * 0.04f, hy - hr * 1.42f), Size(r * 0.08f, hr * 0.30f), CornerRadius(r * 0.03f))
+                for (ang in listOf(30f, 210f)) {
+                    withTransform({ rotate(ang, Offset(cx, hy - hr * 1.42f)) }) {
+                        drawOval(Color(0xFFFF6B6B), Offset(cx + r * 0.02f, hy - hr * 1.55f), Size(hr * 0.75f, r * 0.16f))
+                    }
+                }
+                drawCircle(Color(0xFFFFD32E), radius = r * 0.10f, center = Offset(cx, hy - hr * 1.42f))
+            }
+        }
+    }
+
     private fun mixWhite(c: Color, f: Float): Color = Color(
         red = c.red + (1f - c.red) * f,
         green = c.green + (1f - c.green) * f,

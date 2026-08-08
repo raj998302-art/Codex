@@ -89,7 +89,9 @@ class BillingManager(
     }
 
     fun priceFor(productId: String): String? =
-        products[productId]?.oneTimePurchaseOfferDetails()?.formattedPrice
+        // PBL 7.x exposes oneTimePurchaseOfferDetails as a Kotlin PROPERTY (getter),
+        // not a function — calling it with () fails to compile.
+        products[productId]?.oneTimePurchaseOfferDetails?.formattedPrice
 
     fun launchPurchase(activity: Activity, productId: String) {
         val c = client ?: return

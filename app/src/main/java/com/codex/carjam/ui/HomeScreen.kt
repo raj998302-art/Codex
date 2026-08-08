@@ -29,6 +29,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,7 @@ import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
+import com.codex.carjam.monetize.PlayGamesManager
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -68,7 +70,11 @@ fun HomeScreen(
     sound: SoundManager,
     ads: AdsManager,
     billing: BillingManager,
+    pgs: PlayGamesManager,
+    online: Boolean,
     onPlay: (Int) -> Unit,
+    onPractice: () -> Unit,
+    onRefreshNet: () -> Unit,
 ) {
     var showLevels by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
@@ -76,9 +82,14 @@ fun HomeScreen(
     var showDaily by remember { mutableStateOf(false) }
     var showEvents by remember { mutableStateOf(false) }
     var showRank by remember { mutableStateOf(false) }
+    var showProfile by remember { mutableStateOf(false) }
     val theme = LevelTheme.entries[(prefs.maxLevel.intValue - 1) % LevelTheme.entries.size]
     val event = remember { Events.today() }
     val dailyReady = DailyRewards.canClaim(prefs)
+    val activity = LocalActivity()
+    LaunchedEffect(online) {
+        if (online) activity?.let { pgs.silentCheck(it) }
+    }
 
     Box(Modifier.fillMaxSize()) {
         HomeBackdrop(theme)
@@ -92,8 +103,24 @@ fun HomeScreen(
         ) {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 GearButton { sound.tap(); showSettings = true }
+                SpacerW(10.dp)
+                Row(
+                    Modifier
+                        .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+                        .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                        .clickable { sound.tap(); showProfile = true }
+                        .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AvatarIcon(prefs.avatarId.intValue, 34.dp)
+                    SpacerW(8.dp)
+                    BasicText(
+                        text = prefs.playerName,
+                        style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold),
+                    )
+                }
                 Spacer(Modifier.weight(1f))
-                CoinPill(prefs.coins.intValue, onPlus = { sound.tap(); showShop = true })
+                CoinPill(prefs.coins.intValue, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
             }
 
             SpacerH(34.dp)
@@ -101,9 +128,9 @@ fun HomeScreen(
             OutlinedTextC("SOLVER", 30.dp, fill = Color(0xFFFFD32E), outline = Color(0xFF7A4A00))
             SpacerH(8.dp)
             Pill(
-                text = "${event.emoji} ${event.title} is LIVE",
+                text = if (online) "${event.emoji} ${event.title} is LIVE" else "📴 OFFLINE MODE — everything still playable",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                bg = event.accent.copy(alpha = 0.9f),
+                bg = if (online) event.accent.copy(alpha = 0.9f) else Color(0xFF607D8B).copy(alpha = 0.9f),
             )
 
             SpacerH(44.dp)
@@ -163,11 +190,21 @@ fun HomeScreen(
                 textSize = 18.dp,
                 height = 50.dp,
             )
+            SpacerH(10.dp)
+            SquishyButton(
+                "PRACTICE MODE 🎓",
+                onClick = { sound.tap(); onPractice() },
+                modifier = Modifier.width(240.dp).align(Alignment.CenterHorizontally),
+                top = Color(0xFFB678E8),
+                bottom = Color(0xFF8A45C4),
+                textSize = 16.dp,
+                height = 46.dp,
+            )
 
             Spacer(Modifier.weight(1f))
 
-            // AdMob banner (hidden when No-Ads pack owned)
-            if (!prefs.removeAds.value) {
+            // AdMob banner (hidden when No-Ads pack owned or offline)
+            if (online && !prefs.removeAds.value) {
                 AndroidView(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -186,7 +223,10 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Spacer(Modifier.weight(1f))
-                    Pill("Tap cars • match colours • clear the jam", bg = Color.Black.copy(alpha = 0.35f))
+                    Pill(
+                        if (online) "Tap cars • match colours • clear the jam" else "📴 Offline — ads & shop take a break",
+                        bg = Color.Black.copy(alpha = 0.35f),
+                    )
                     Spacer(Modifier.weight(1f))
                 }
             }
@@ -226,6 +266,11 @@ fun HomeScreen(
         }
         if (showRank) {
             LeaderboardDialog(prefs = prefs, onClose = { showRank = false })
+        }
+        if (showProfile) {
+            activity?.let {
+                ProfileDialog(prefs = prefs, pgs = pgs, activity = it, onClose = { showProfile = false })
+            } ?: run { showProfile = false }
         }
     }
 }

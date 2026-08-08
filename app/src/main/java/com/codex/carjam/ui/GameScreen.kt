@@ -46,6 +46,7 @@ import kotlin.math.min
 fun GameScreen(
     level: Int,
     attempt: Int,
+    practice: Boolean,
     prefs: Prefs,
     sound: SoundManager,
     ads: AdsManager,
@@ -71,26 +72,36 @@ fun GameScreen(
                 Fx.COIN -> sound.coin()
                 Fx.DEPART -> sound.depart()
                 Fx.REVEAL -> sound.reveal()
-                Fx.WIN -> sound.win()
-                Fx.LOSE -> sound.lose()
+                Fx.WIN -> {
+                    sound.win()
+                    if (practice) prefs.recordPractice() else prefs.recordWin()
+                }
+
+                Fx.LOSE -> {
+                    sound.lose()
+                    if (!practice) prefs.recordLoss()
+                }
             }
         }
     }
 
-    val winBonus = (40 * event.coinMult).toInt()
-    val spec = remember(level, attempt) { LevelGenerator.generate(level, mysteryBoost = event.mysteryBoost) }
+    val activeMult = if (practice) 0f else event.coinMult
+    val winBonus = (40 * activeMult).toInt()
+    val spec = remember(level, attempt) { LevelGenerator.generate(level, mysteryBoost = if (practice) 0 else event.mysteryBoost) }
     val engine = remember(level, attempt) {
         GameEngine(
             spec = spec,
             onFx = fx,
-            onCoinLanded = { v -> prefs.addCoins(v) },
+            onCoinLanded = { v -> if (!practice) prefs.addCoins(v) },
             onWin = {
-                prefs.unlockLevel(level + 1)
-                prefs.addCoins(winBonus)
+                if (!practice) {
+                    prefs.unlockLevel(level + 1)
+                    prefs.addCoins(winBonus)
+                }
             },
         ).apply {
-            coinMult = event.coinMult
-            grantBonusSlots(event.bonusSlots)
+            coinMult = activeMult
+            grantBonusSlots(if (practice) 0 else event.bonusSlots)
         }
     }
 
@@ -156,8 +167,8 @@ fun GameScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 Pill(
-                    "${event.emoji} ${event.title}",
-                    bg = event.accent.copy(alpha = 0.85f),
+                    if (practice) "🎓 PRACTICE MODE — free play, no coins at stake" else "${event.emoji} ${event.title}",
+                    bg = if (practice) Color(0xFF607D8B).copy(alpha = 0.9f) else event.accent.copy(alpha = 0.85f),
                 )
                 Spacer(Modifier.weight(1f))
             }
@@ -169,9 +180,9 @@ fun GameScreen(
         if (result == GameResult.WON && engine.resultAge() > 900f) {
             WinDialog(
                 level = level,
-                coinsEarned = engine.coinsEarned + winBonus,
+                coinsEarned = if (practice) 0 else engine.coinsEarned + winBonus,
                 onNext = {
-                    (view.context as? Activity)?.let { act -> ads.maybeShowInterstitial(act, level) }
+                    if (!practice) (view.context as? Activity)?.let { act -> ads.maybeShowInterstitial(act, level) }
                     onNext()
                 },
                 onHome = onHome,

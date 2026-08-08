@@ -14,7 +14,7 @@ enum class GameResult { PLAYING, WON, LOST }
 
 enum class CarPhase { IN_ARENA, EXITING, PARKED, DEPARTING, GONE }
 
-private class MoveSeg(
+class MoveSeg(
     val p0: Pt,
     val ctrl: Pt?,
     val p1: Pt,

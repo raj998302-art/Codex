@@ -142,7 +142,7 @@ fun SpacerH(h: Dp) = Spacer(Modifier.height(h))
 
 /** Cartoony gear button like the reference HUD. */
 @Composable
-fun GearButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun GearButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
             .size(62.dp)

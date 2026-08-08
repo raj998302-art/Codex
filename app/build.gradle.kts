@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.codex.carjam"
-    compileSdk = 34
+    // billing:7.1.1's AAR is compiled against SDK 35 — anything lower makes AGP's
+    // checkAarMetadata task fail the build. Keep at 35+.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.codex.carjam"
@@ -64,10 +66,10 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
-    // Bisect B2: plain billing artifact (ktx variant broke the CI build; we use
-    // zero ktx extensions, the classic Java-style API lives in the base artifact).
+    // Monetization: Google Play Billing (base artifact — we use no ktx extensions)
+    // + AdMob (Google TEST IDs wired in; see README to go live).
     implementation("com.android.billingclient:billing:7.1.1")
-    // implementation("com.google.android.gms:play-services-ads:23.3.0")
+    implementation("com.google.android.gms:play-services-ads:23.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

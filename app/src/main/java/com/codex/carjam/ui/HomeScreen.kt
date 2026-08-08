@@ -45,6 +45,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.codex.carjam.game.CarColor
 import com.codex.carjam.game.CarType
 import com.codex.carjam.game.DailyRewards
@@ -55,6 +56,9 @@ import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -162,22 +166,20 @@ fun HomeScreen(
 
             Spacer(Modifier.weight(1f))
 
-            // STUB banner placeholder (bisect build; AdMob SDK returns after isolation)
+            // AdMob banner (hidden when No-Ads pack owned)
             if (!prefs.removeAds.value) {
-                Row(
-                    Modifier
+                AndroidView(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Spacer(Modifier.weight(1f))
-                    BasicText(
-                        "· banner ad spot ·",
-                        style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp),
-                    )
-                    Spacer(Modifier.weight(1f))
-                }
+                        .navigationBarsPadding(),
+                    factory = { ctx ->
+                        AdView(ctx).apply {
+                            setAdSize(AdSize.BANNER)
+                            adUnitId = AdsManager.BANNER_ID
+                            loadAd(AdRequest.Builder().build())
+                        }
+                    },
+                )
             } else {
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 14.dp),

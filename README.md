@@ -42,8 +42,14 @@ app/src/main/java/com/codex/carjam/
 
 ## Building the APK with GitHub Actions (no local setup)
 
-The workflow [.github/workflows/android-build.yml](.github/workflows/android-build.yml) runs on
-every push and on demand:
+The workflow YAML ships in this repo twice: [.github/workflows/android-build.yml](.github/workflows/android-build.yml)
+and a plain-text mirror at [ci/android-build.yml.txt](ci/android-build.yml.txt).
+(The mirror exists because some GitHub tokens are not allowed to push files into
+`.github/workflows/` — if the real workflow file is missing on your branch, add it once by hand:
+**Actions → New workflow → set up a workflow yourself** → paste the contents of
+`ci/android-build.yml.txt` → **Commit changes**. That's it — everything builds automatically after that.)
+
+The workflow runs on every push and on demand:
 
 1. Open the repo's **Actions** tab → pick the latest **"Android APK Build"** run
    (or use **Run workflow** to start one manually).

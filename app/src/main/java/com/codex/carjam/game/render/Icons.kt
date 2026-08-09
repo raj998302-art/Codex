@@ -15,7 +15,7 @@ import kotlin.math.sin
 enum class GameIconKind {
     CART, GIFT, CALENDAR, TROPHY, GRAD_CAP, WIFI_OFF, SHIELD, LOCK, PLAY_AD,
     GEM, MEDAL_1, MEDAL_2, MEDAL_3, FIRE, CLOVER, PARKING, MYSTERY, BOLT, COIN_STACK, STAR,
-    GAMEPAD, HAMMER, SHUFFLE, ELIMINATE, PIGGY, REFRESH,
+    GAMEPAD, HAMMER, SHUFFLE, ELIMINATE, PIGGY,
 }
 
 /**
@@ -547,43 +547,6 @@ object Icons {
             GameIconKind.SHUFFLE -> shuffle(l, t, s)
             GameIconKind.ELIMINATE -> eliminate(l, t, s)
             GameIconKind.PIGGY -> piggy(l, t, s)
-            GameIconKind.REFRESH -> refresh(l, t, s)
         }
-    }
-
-    /** Queue Refresh: twin circular arrows chasing each other (chaos reshuffle look). */
-    fun DrawScope.refresh(l: Float, t: Float, s: Float) {
-        val cx = l + s * 0.5f
-        val cy = t + s * 0.5f
-        val r = s * 0.30f
-        // the two chasing arrow heads
-        val arcA = Color(0xFFD63030)
-        val arcB = Color(0xFF35D0DC)
-        // ring tracks
-        drawArc(Color(0xFF2B2B33), 10f, 165f, false, Offset(cx - r, cy - r), Size(r * 2f, r * 2f), style = Stroke(s * 0.10f))
-        drawArc(arcA, 14f, 157f, false, Offset(cx - r, cy - r), Size(r * 2f, r * 2f), style = Stroke(s * 0.06f))
-        drawArc(Color(0xFF2B2B33), 190f, 165f, false, Offset(cx - r, cy - r), Size(r * 2f, r * 2f), style = Stroke(s * 0.10f))
-        drawArc(arcB, 194f, 157f, false, Offset(cx - r, cy - r), Size(r * 2f, r * 2f), style = Stroke(s * 0.06f))
-        // arrowheads at the ends of each sweep
-        val a1 = Math.toRadians(166.0)
-        val a2 = Math.toRadians(-14.0)
-        val p1 = Offset((cx + kotlin.math.cos(a1) * r).toFloat(), (cy + kotlin.math.sin(a1) * r).toFloat())
-        val p2 = Offset((cx + kotlin.math.cos(a2) * r).toFloat(), (cy + kotlin.math.sin(a2) * r).toFloat())
-        val head1 = Path().apply {
-            moveTo(p1.x, p1.y)
-            lineTo(p1.x - s * 0.16f, p1.y - s * 0.02f)
-            lineTo(p1.x - s * 0.04f, p1.y + s * 0.14f)
-            close()
-        }
-        val head2 = Path().apply {
-            moveTo(p2.x, p2.y)
-            lineTo(p2.x + s * 0.16f, p2.y + s * 0.02f)
-            lineTo(p2.x + s * 0.04f, p2.y - s * 0.14f)
-            close()
-        }
-        drawPath(head1, Color(0xFF2B2B33))
-        drawPath(head2, Color(0xFF2B2B33))
-        drawPath(head1, arcA)
-        drawPath(head2, arcB)
     }
 }

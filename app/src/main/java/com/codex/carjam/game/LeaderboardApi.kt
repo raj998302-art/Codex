@@ -19,8 +19,8 @@ import java.util.concurrent.Executors
  */
 object LeaderboardApi {
 
-    /** ⚠️ After deploying backend/ to Render, paste your service URL here. */
-    const val BASE_URL = "https://YOUR-RENDER-SERVICE.onrender.com"
+    /** Live leaderboard service (Render — backend/ in this repo). */
+    const val BASE_URL = "https://carjam.onrender.com"
 
     val CONFIGURED: Boolean get() = !BASE_URL.contains("YOUR-")
 

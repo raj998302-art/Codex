@@ -662,8 +662,6 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
             BoostOffer(GameIconKind.HAMMER, "ICE HAMMER x3", "Stock up for the deep ice levels.", 3, 650),
             BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x1", "Reshuffles the line so the front one fits.", 1, 200),
             BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x3", "A pocket full of second chances.", 3, 500),
-            BoostOffer(GameIconKind.REFRESH, "QUEUE REFRESH x1", "Full chaos reshuffle — arena colours bubble up front.", 1, 250),
-            BoostOffer(GameIconKind.REFRESH, "QUEUE REFRESH x3", "Restock the reshuffles before a boss board.", 3, 600),
             BoostOffer(GameIconKind.ELIMINATE, "ELIMINATE x1", "Instantly sends one picked car out of the jam.", 1, 0, gemPrice = 12),
             BoostOffer(GameIconKind.ELIMINATE, "ELIMINATE x3", "Clear the nastiest blockers on sight.", 3, 0, gemPrice = 30),
         )
@@ -719,7 +717,6 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
                                 when (offer.kind) {
                                     GameIconKind.HAMMER -> prefs.addHammers(offer.count)
                                     GameIconKind.ELIMINATE -> prefs.addElims(offer.count)
-                                    GameIconKind.REFRESH -> prefs.addRefreshes(offer.count)
                                     else -> prefs.addShuffles(offer.count)
                                 }
                                 CloudSave.sync(prefs, force = true)

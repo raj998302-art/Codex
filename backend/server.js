@@ -69,6 +69,7 @@ const saveSchema = new mongoose.Schema(
     hammers: { type: Number, default: 0 },         // booster belt
     shuffles: { type: Number, default: 0 },
     elims: { type: Number, default: 0 },           // eliminate booster
+    refreshes: { type: Number, default: 1 },       // queue refresh booster
     piggy: { type: Number, default: 0 },           // piggy-bank fill (0-800)
     frames: { type: String, default: '0' },        // comma-joined unlocked avatar-frame ids
     frameSel: { type: Number, default: 0 },        // currently worn avatar frame
@@ -157,6 +158,7 @@ const canonicalSave = (doc) => ({
   hammers: clampInt(doc.hammers, 0, 99),
   shuffles: clampInt(doc.shuffles, 0, 99),
   elims: clampInt(doc.elims, 0, 99),
+  refreshes: clampInt(doc.refreshes, 0, 99),
   piggy: clampInt(doc.piggy, 0, 800),
   frames: typeof doc.frames === 'string' && doc.frames ? doc.frames : '0',
   frameSel: clampInt(doc.frameSel, 0, 99),
@@ -274,8 +276,9 @@ app.post('/api/save', async (req, res) => {
     const musicOn = body.musicOn === undefined ? (P('musicOn') ?? true) : !!body.musicOn;
 
     // Avatar frames (v3.0): union-merge unlocks like the garage; the worn
-    // frame only sticks when it survives the merge.
-    const frameIds = (s) => String(s || '').split(',').filter((x) => /^\d{1,2}$/.test(x));
+    // frame only sticks when it survives the merge. v3.3 entries may carry a
+    // source tag ("3:c" = bought with coins in the shop).
+    const frameIds = (s) => String(s || '').split(',').filter((x) => /^\d{1,2}(:[a-z])?$/.test(x));
     const frames = [...new Set(['0', ...frameIds(P('frames')), ...frameIds(body.frames)])].slice(0, 32);
     const frameSet = new Set(frames);
     const bodyFrame = String(body.frameSel ?? '0');
@@ -303,6 +306,7 @@ app.post('/api/save', async (req, res) => {
       hammers: economyClamp(P('hammers'), elapsedH, body.hammers, 6, 3, 99),
       shuffles: economyClamp(P('shuffles'), elapsedH, body.shuffles, 9, 4, 99),
       elims: economyClamp(P('elims'), elapsedH, body.elims, 3, 1, 99),
+      refreshes: economyClamp(P('refreshes'), elapsedH, body.refreshes, 6, 3, 99),
       piggy: economyClamp(P('piggy'), elapsedH, body.piggy, 80, 40, 800),
       frames: frames.join(','),
       frameSel: clampInt(frameSel, 0, 99),

@@ -213,6 +213,20 @@ player's own saved stats (still zero demo bots).
 | **Next-unlock teaser** | A pill on the win panel names the next map/board waiting ahead ("AT L21: Lava MAP") |
 | **METRO train polish** | Reference-look: orange cab stripe with shine line, door seams, platform railing behind the queue band |
 
+## v3.3 (mega drop 2: skins, scrapbook, league screens, luxury lane)
+
+| System | What changed |
+| --- | --- |
+| **Vehicle skins (9 rides)** | Skin catalog rides bolt-on deco over the base cars — TRAIL BOSS (roof rack + spare tire), GRID RACER (rear wing), GRAND TOURER (rails), GLASS POD (dome), CARGO KING (container), APEX GT (go-stripes), FIFTIES CRUISER (chrome), PHANTOM V12 (gold coach trim, on the new TOURIST coach body), POCKET JET (roof flag). Levels >= 10 drip skins onto jam cars deterministically; shop tiles, home road preview and the board always agree. New CarType TOURIST (7 seats) plus an in-house hero lane — VULCAN / MATADOR SV / AERO 54 / ZEPHYR R / KAISER SL / BAVARIA M8 — the original-design answer to the Bugatti/Lamborghini/McLaren/Pagani/BMW/Mercedes wish list |
+| **Skin Shop (banner screen + dialog)** | VEHICLE / SCENE tabs with section banners: **Unlock by Passing Levels** (progress tiles like "2/10", Auto Switch mosaic), **Unlock in Event** (special-day only: claim the SUMMER BEAT frame + coins on x2-coin days), **Unlock by Buying Packs** (500-coin vehicle pack with a 250-coin rebate). Scene tiles pin the map manually (cloud-synced); Auto Switch restores rotation |
+| **Style-aware themes + OTHER board** | New LayoutStyle.OTHER (L20+): ring-boulevard "traffic circle" jams parked on two concentric plaza rings; new Deco.EVENT hero map (spotlight beams + confetti rain) that only leaks into the rotation on special event days after L30 |
+| **Collection 2.0 = 70 cards** | The book swells to the reference wall size: No.1–No.70 with silhouettes until earned, skin cards mixed in from No.13, hero machines owning the back shelf. New full-screen COLLECTION page with CARDS / CARS tabs, parchment tiles and the "Collection Progress: X/70" footer |
+| **Leaderboard banner screen** | WEEKLY WINNERS tab: gold podium blocks with crowns, medals, winner chests and "Levels:N" foils; countdown chip ("2d 7h left") + PROMOTION PRIZE x10 chip. LEAGUE tab: Novice League banner + trophy ladder + pinned YOU row. Opens its profile (Info) from any block |
+| **Profile = reference Info dialog** | Full-page PROFILE: avatar + name + green pencil editor; AVATOR / FRAME / BADGE / SHOP tabs. Frames now source-tagged (`u` level/coins `c`/gems `g`/weekly `w`/event `e`/ads `a`) with shelves per source — WEEKLY CROWN from podium top-3 finishes, MEOW SQUAD behind a 5-ad watch strip, ROYAL VELVET as the premium shelf piece. BADGE tab lists six earnable badges (Early Riser, Jam Master, Big Collector, Bank Breaker, Ranked Star, Social Spark) |
+| **Queue Refresh booster** | 4th belt chip (green): full chaos reshuffle — every colour still parked inside the arena bubbles to the visible queue front, the rest shuffles behind; multiset-preserving so impossible to deadlock. Starter stock 1, shop x1 = 250 / x3 = 600 coins, cloud clamped 6/hr |
+| **Queue-paint ghosts** | Every parked ride wears a live bubble: colored seat count its colour can fill from the visible queue front + gray "+n" that's still stranded behind the curtain |
+| **Clean home backdrop** | The mock jam board is gone — soft themed sky (per-theme menuSky blend), lazy drifting clouds, sun glow, distant toy-town skyline and one patient passenger queue at the bottom edge. First launch after update pops the SKIN SHOP welcome kit (SPRINTER frame worn instantly + 100 coins + 1 mix + 1 refresh) |
+
 ## v3.1 (home screen redesign — reference layout)
 
 | System | What changed |

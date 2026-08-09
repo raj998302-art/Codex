@@ -64,6 +64,7 @@ import com.codex.carjam.game.LeaderboardApi
 import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
+import com.codex.carjam.game.VehicleSkins
 import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
@@ -86,6 +87,11 @@ fun HomeScreen(
     onPlay: (Int) -> Unit,
     onPractice: () -> Unit,
     onRefreshNet: () -> Unit,
+    // v3.3 full-page destinations (reference banner screens)
+    onOpenSkinShop: () -> Unit = {},
+    onOpenCollection: () -> Unit = {},
+    onOpenLeaderboard: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
 ) {
     var showLevels by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
@@ -99,9 +105,21 @@ fun HomeScreen(
     var showWelcome by remember { mutableStateOf(!prefs.welcomed.value) }
     var seasonPrize by remember { mutableStateOf<SeasonPrize?>(null) }
     val theme = run {
-        // mirror the generator: only themes already unlocked at this level
-        val pool = LevelTheme.entries.filter { prefs.maxLevel.intValue >= it.minLevel }
-        pool[((prefs.maxLevel.intValue - 1) % pool.size).coerceAtLeast(0)]
+        // Skin Shop manual scene pins the backdrop too; special days may leak the EVENT look
+        val manual = prefs.manualScene.value?.let { name ->
+            LevelTheme.entries.firstOrNull { it.name == name && prefs.maxLevel.intValue >= it.minLevel }
+        }
+        if (manual != null) {
+            manual
+        } else {
+            val ev = Events.today()
+            val pool = LevelTheme.entries
+                .filter { prefs.maxLevel.intValue >= it.minLevel }
+                .let { base ->
+                    if (ev.isSpecial() && prefs.maxLevel.intValue >= LevelTheme.EVENT.minLevel && online) base + LevelTheme.EVENT else base
+                }
+            pool[((prefs.maxLevel.intValue - 1) % pool.size).coerceAtLeast(0)]
+        }
     }
     val event = remember { Events.today() }
     val dailyReady = DailyRewards.canClaim(prefs)
@@ -109,7 +127,7 @@ fun HomeScreen(
     val maxLevel = prefs.maxLevel.intValue
     // locked decorative pedestals (tease upcoming toys, exactly like the reference home)
     val leftPedestals = listOf(13, 20, 26, 45)
-    val rightPedestals = listOf(4, 11, 13)
+    val rightPedestals = listOf(4, 11)
     LaunchedEffect(online) {
         if (online) {
             activity?.let { pgs.silentCheck(it) }
@@ -121,6 +139,8 @@ fun HomeScreen(
                     val (coins, gems) = seasonPrizeForRank(rank)
                     prefs.addCoins(coins)
                     if (gems > 0) prefs.addGems(gems)
+                    // v3.3: weekly podium top-3 ALSO takes home the WEEKLY CROWN frame
+                    if (rank <= 3) prefs.unlockFrame(7, "w")
                     prefs.setLastSeasonWeek(weekId)
                     CloudSave.sync(prefs, force = true)
                     seasonPrize = SeasonPrize(weekId, rank, coins, gems)
@@ -158,7 +178,7 @@ fun HomeScreen(
                         .weight(1f)
                         .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
                         .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-                        .clickable { sound.tap(); showProfile = true }
+                        .clickable { sound.tap(); onOpenProfile() }
                         .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -302,7 +322,13 @@ fun HomeScreen(
                     SpacerH(10.dp)
                     FeaturePedestal(level = rightPedestals[1], current = maxLevel) { locked -> pedestalBag(locked) }
                     SpacerH(10.dp)
-                    FeaturePedestal(level = rightPedestals[2], current = maxLevel) { locked -> pedestalChest(locked) }
+                    // v3.3: the treasure chest is LIVE — it opens the Skin Shop
+                    FeaturePedestal(
+                        level = 1,
+                        current = maxLevel,
+                        caption = "SKIN",
+                        onClick = { sound.tap(); onOpenSkinShop() },
+                    ) { pedestalChest(false) }
                 }
             }
 
@@ -329,7 +355,7 @@ fun HomeScreen(
                 onQuests = { sound.tap(); showQuests = true },
                 onPlay = { sound.tap(); onPlay(maxLevel) },
                 onShop = { sound.tap(); if (!online) onRefreshNet(); showShop = true },
-                onRank = { sound.tap(); showRank = true },
+                onRank = { sound.tap(); onOpenLeaderboard() },
             )
         }
 
@@ -395,17 +421,24 @@ fun HomeScreen(
             EventsDialog(onClose = { showEvents = false })
         }
         if (showRank) {
-            LeaderboardDialog(prefs = prefs, onClose = { showRank = false })
+            // v3.3: full-page leaderboard owns this route now
+            onOpenLeaderboard()
+            showRank = false
         }
         if (showPiggy) {
             activity?.let {
                 PiggyBankDialog(prefs = prefs, billing = billing, activity = it, onClose = { showPiggy = false })
             } ?: run { showPiggy = false }
         }
+        // v3.3: first-run skin-shop starter kit (self-dismisses when already granted)
+        var skinsStarterDone by remember { mutableStateOf(false) }
+        if (!skinsStarterDone && prefs.welcomed.value) {
+            WelcomeSkinsDialog(prefs = prefs, onDone = { skinsStarterDone = true })
+        }
         if (showProfile) {
-            activity?.let {
-                ProfileDialog(prefs = prefs, pgs = pgs, activity = it, onClose = { showProfile = false })
-            } ?: run { showProfile = false }
+            // v3.3: full-page profile owns this route now
+            onOpenProfile()
+            showProfile = false
         }
     }
 }
@@ -442,6 +475,10 @@ private fun LevelRoad(ride: Garage.Ride, level: Int, modifier: Modifier = Modifi
                         arrowVisible = false,
                         variant = ride.variant,
                     )
+                    // v3.3: the road also wears the freshest skin your level drips
+                    VehicleSkins.teaserFor(level)?.let { skin ->
+                        drawCarSkinOverlay(skin.id, u * 0.5f, u * 0.58f, 0f, ride.type, u / 210f)
+                    }
                 }
             }
         }
@@ -834,84 +871,75 @@ private fun NavTab(
     }
 }
 
-/** Animated toy-town backdrop reusing the game's own painters. */
+/** Clean minimal home backdrop (v3.3): soft themed sky, drifting clouds, a
+ *  quiet passenger queue at the very bottom — no mock game board behind the UI. */
 @Composable
 private fun HomeBackdrop(theme: LevelTheme) {
     val inf = rememberInfiniteTransition(label = "home-bg")
     val phase by inf.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(tween(3600), RepeatMode.Restart),
-        label = "bob",
+        animationSpec = infiniteRepeatable(tween(5000), RepeatMode.Restart),
+        label = "drift",
     )
 
     Canvas(Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        // sky + ground
-        drawRect(Brush.verticalGradient(listOf(theme.skyTop, theme.skyBottom)))
-        drawRect(theme.road, topLeft = Offset(0f, h * 0.60f), size = Size(w, h * 0.075f))
-        drawRect(theme.arenaBg, topLeft = Offset(0f, h * 0.675f), size = Size(w, h * 0.325f))
-        drawRect(
-            theme.arenaEdge,
-            topLeft = Offset(0f, h * 0.675f - 10f),
-            size = Size(w, 10f),
-        )
+        // bright airy sky: the theme's own colours lightened toward a clean menu sky
+        val skyT = mixToward(theme.skyTop, Color(0xFF9AD5FF), 1f - theme.menuSky + 0.25f)
+        val skyB = mixToward(theme.skyBottom, Color(0xFF3F8FD8), (1f - theme.menuSky) * 0.5f)
+        drawRect(Brush.verticalGradient(listOf(skyT, skyB)))
 
-        val u = min(w, h) / 26f
+        // soft sun glow top-right
+        drawCircle(Color(0xFFFFF3B8).copy(alpha = 0.45f), radius = w * 0.16f, center = Offset(w * 0.82f, h * 0.10f))
+        drawCircle(Color(0xFFFFF9DE).copy(alpha = 0.30f), radius = w * 0.24f, center = Offset(w * 0.82f, h * 0.10f))
 
-        // queue of passengers, gently bobbing
-        val palette = CarColor.playable
-        val midY = h * 0.545f
-        for (i in 0 until 9) {
-            val x = w * 0.16f + i * w * 0.085f
-            val dy = sin(phase + i * 0.7f) * u * 0.16f
-            with(Painters) {
-                drawPassenger(x, midY + dy, palette[i % palette.size], scale = u / 34f)
-            }
-        }
-
-        // mini jam board bottom area
-        val boardCx = w / 2f
-        val boardTop = h * 0.72f
-        val cols = 5
-        val rows = 3
-        val cw = w * 0.84f / cols
-        val chh = (h * 0.24f) / rows
-        var k = 0
-        for (r in 0 until rows) {
-            for (c in 0 until cols) {
-                val x = boardCx - cw * 2f + cw * (c + 0.5f)
-                val y = boardTop + chh * (r + 0.5f)
-                val angle = when ((r + c) % 4) {
-                    0 -> 8f
-                    1 -> 90f
-                    2 -> 186f
-                    else -> 272f
-                } + sin(phase * 0.4f + k) * 2f
-                val type = if ((r * cols + c) % 7 == 3) CarType.VAN else CarType.SEDAN
-                val color = palette[(k * 3 + r) % palette.size]
-                drawRoundRect(
-                    color = Color.Black.copy(alpha = 0.10f),
-                    topLeft = Offset(x - u * 1.05f, y - u * 1.7f),
-                    size = Size(u * 2.1f, u * 3.4f),
-                    cornerRadius = CornerRadius(u * 0.6f),
-                )
-                with(Painters) {
-                    drawCar(x, y, angle, type, color, scale = u / 46f, variant = k)
-                }
-                k++
-            }
-        }
-
-        // parked cars on the road strip like the slot lane
+        // lazy clouds drifting across the upper sky
         for (i in 0 until 3) {
-            val x = w * (0.22f + i * 0.28f)
-            val y = h * 0.585f
-            val a = if (i % 2 == 0) 90f else 270f
+            val baseX = (w * (0.24f + i * 0.36f) + sin(phase + i * 2.2f) * w * 0.05f)
+            val cy = h * (0.12f + i * 0.075f)
+            val cw = w * (0.16f + i * 0.02f)
+            val ch = cw * 0.34f
+            val cloud = Color.White.copy(alpha = 0.85f - i * 0.14f)
+            drawOval(cloud, Offset(baseX - cw / 2f, cy - ch / 2f), Size(cw, ch))
+            drawOval(cloud, Offset(baseX - cw * 0.34f, cy - ch * 0.8f), Size(cw * 0.5f, ch * 0.9f))
+            drawOval(cloud, Offset(baseX + cw * 0.10f, cy - ch * 0.8f), Size(cw * 0.44f, ch * 0.8f))
+        }
+
+        // quiet horizon band + distant toy-town skyline suggestion
+        drawRect(skyB.copy(alpha = 0.35f), topLeft = Offset(0f, h * 0.86f), size = Size(w, h * 0.14f))
+        for (i in 0 until 6) {
+            val bx = w * (0.06f + i * 0.17f)
+            val bw = w * 0.10f
+            val bh = h * (0.05f + (i % 3) * 0.02f)
+            drawRoundRect(
+                theme.arenaEdge.copy(alpha = 0.25f),
+                topLeft = Offset(bx, h * 0.86f - bh),
+                size = Size(bw, bh),
+                cornerRadius = CornerRadius(8f),
+            )
+        }
+
+        // a small patient queue of passengers at the very bottom — alive but out of the way
+        val palette = CarColor.playable
+        val qY = h * 0.955f
+        for (i in 0 until 7) {
+            val x = w * 0.30f + i * w * 0.065f
+            val dy = sin(phase * 1.4f + i * 0.7f) * 5f
             with(Painters) {
-                drawCar(x, y, a, CarType.SEDAN, palette[(i * 4 + 1) % palette.size], scale = u / 52f, variant = i + 1)
+                drawPassenger(x, qY + dy, palette[i % palette.size], scale = 0.34f)
             }
         }
     }
+}
+
+/** Lighten [c] toward [target] by [f] (0..1+). */
+private fun mixToward(c: Color, target: Color, f: Float): Color {
+    val t = f.coerceIn(0f, 1f)
+    return Color(
+        red = c.red + (target.red - c.red) * t,
+        green = c.green + (target.green - c.green) * t,
+        blue = c.blue + (target.blue - c.blue) * t,
+    )
 }

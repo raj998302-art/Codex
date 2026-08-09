@@ -13,7 +13,10 @@ data class GameEvent(
     val bonusSlots: Int,
     val mysteryBoost: Int,
     val accent: Color,
-)
+) {
+    /** v3.3: rare boost days — the only days the EVENT hero theme may leak into the board pool. */
+    fun isSpecial(): Boolean = coinMult >= 2f && bonusSlots >= 1
+}
 
 /**
  * Offline daily-rotating events. One event is live at any moment, chosen from the

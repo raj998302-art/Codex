@@ -71,11 +71,12 @@ enum class CarType(val seats: Int, val len: Float, val wid: Float) {
     SEDAN(seats = 4, len = 150f, wid = 84f),
     VAN(seats = 5, len = 168f, wid = 88f),
     BUS(seats = 6, len = 214f, wid = 90f),
+    TOURIST(seats = 7, len = 228f, wid = 94f),
 }
 
-enum class LayoutStyle(val minLevel: Int) { GRID(1), HEAP(2), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13) }
+enum class LayoutStyle(val minLevel: Int) { GRID(1), HEAP(2), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13), OTHER(20) }
 
-enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT }
+enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT, EVENT }
 
 /** Full colour script for a level, mirroring the themed boards in the screenshots. */
 enum class LevelTheme(
@@ -91,6 +92,8 @@ enum class LevelTheme(
     val deco: Deco,
     /** Themes keep unlocking as the player climbs — new map, new mood. */
     val minLevel: Int = 1,
+    /** 0.0..1.0: how far the home-screen menu backdrop leans toward this theme's sky. */
+    val menuSky: Float = 0.42f,
 ) {
     SEA(
         skyTop = Color(0xFF7FD8E6), skyBottom = Color(0xFF3FA6C8),
@@ -180,6 +183,14 @@ enum class LevelTheme(
         signBoard = Color(0xFF7E3FC8), signPost = Color(0xFF5B2A94),
         deco = Deco.NIGHT, minLevel = 26,
     ),
+    EVENT(
+        skyTop = Color(0xFF2AA5FF), skyBottom = Color(0xFF0B64C8),
+        slotBandTop = Color(0xFF0A7AE0), slotBandBottom = Color(0xFF0657A8),
+        road = Color(0xFF31415E),
+        arenaBg = Color(0xFF1678DE), arenaEdge = Color(0xFFFFC93C),
+        signBoard = Color(0xFFFFA000), signPost = Color(0xFFB26A00),
+        deco = Deco.EVENT, minLevel = 30, menuSky = 0.68f,
+    ),
 }
 
 data class LevelSpec(
@@ -195,6 +206,8 @@ data class LevelSpec(
     val gateNeed: Int = 0,
     /** Extra parking slots shown locked; buyable with coins or a rewarded ad. */
     val lockedSlots: Int = 0,
+    /** Layout actually used to scatter the playable cars (extras round to OTHER own plazas). */
+    val style: LayoutStyle = layout,
 ) {
     val totalPassengers: Int get() = queue.size
 }

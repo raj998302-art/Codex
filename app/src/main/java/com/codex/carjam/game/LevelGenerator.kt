@@ -62,6 +62,7 @@ object LevelGenerator {
         // Difficulty ramp: the jam should look PACKED — the Play Store reference
         // fills the board with 40-60+ cars once you're out of the tutorial.
         val styleCap = when (style) {
+            else -> 50 /*bisect-tolerant*/
             LayoutStyle.GRID -> 64
             LayoutStyle.DISC -> 56
             LayoutStyle.SPIRAL -> 52
@@ -242,6 +243,7 @@ object LevelGenerator {
 
     private fun tryPlace(style: LayoutStyle, count: Int, rng: Random): List<P>? {
         val cells: List<Pt>? = when (style) {
+            else -> null /*bisect-tolerant*/
             LayoutStyle.GRID -> gridCells(count, diagonal = false)
             LayoutStyle.DIAGONAL -> gridCells(count, diagonal = true)
             LayoutStyle.SPIRAL -> spiralPoints(count)
@@ -305,6 +307,7 @@ object LevelGenerator {
         rng: Random,
     ): Vec3? {
         when (style) {
+            else -> return null /*bisect-tolerant*/
             LayoutStyle.GRID, LayoutStyle.DIAGONAL -> {
                 val cell = cells!![idx % cells.size]
                 val jx = (rng.nextFloat() - 0.5f) * 14f

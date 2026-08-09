@@ -68,6 +68,7 @@ object LevelGenerator {
             LayoutStyle.DIAGONAL -> 44
             LayoutStyle.HEART -> 52
             LayoutStyle.HEAP -> 58
+            LayoutStyle.OTHER -> 50
         }
         val baseCount = min((14 + level * 3), styleCap).coerceAtLeast(14)
         val baseSeed = level * 7919 + 17
@@ -248,6 +249,7 @@ object LevelGenerator {
             LayoutStyle.HEART -> heartPoints(count)
             LayoutStyle.DISC -> null
             LayoutStyle.HEAP -> null
+            LayoutStyle.OTHER -> null
         }
         val allowBig = when (style) {
             LayoutStyle.GRID -> {
@@ -358,6 +360,7 @@ object LevelGenerator {
 
             LayoutStyle.DISC -> return scatterCandidate(type, rng)
             LayoutStyle.HEAP -> return heapCandidate(type, rng)
+            LayoutStyle.OTHER -> return heapCandidate(type, rng)
         }
     }
 

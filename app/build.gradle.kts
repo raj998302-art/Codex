@@ -14,8 +14,8 @@ android {
         applicationId = "com.codex.carjam"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 3
+        versionName = "2.2"
     }
 
     buildTypes {
@@ -73,6 +73,14 @@ dependencies {
 
     // Google Play Games Services sign-in (v2; activates after Play Console setup)
     implementation("com.google.android.gms:play-services-games-v2:20.1.0")
+
+    // Razorpay checkout (UPI/cards) — used only by the direct-distribution build;
+    // stay on Google Play Billing for Play-Store builds (policy). standard-core is
+    // pinned because checkout's POM references it as the dynamic version LATEST.
+    implementation("com.razorpay:checkout:1.6.41") {
+        exclude(group = "com.razorpay", module = "standard-core")
+    }
+    implementation("com.razorpay:standard-core:1.7.14")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

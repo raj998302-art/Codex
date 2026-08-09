@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Play Games Services project number.
+         Play Console → Play Games Services → Setup & management → Configuration →
+         copy the 12-digit "Project number" here (see README → Google Play sign-in). -->
+    <string name="games_app_id">012345678901</string>
+</resources>

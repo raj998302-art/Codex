@@ -40,6 +40,7 @@ import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
+import com.codex.carjam.monetize.RazorpayManager
 import java.util.Calendar
 
 private val Dark = Color(0xFF4A3826)
@@ -65,6 +66,7 @@ fun ShopDialog(
     billing: BillingManager,
     ads: AdsManager,
     prefs: Prefs,
+    razorpay: RazorpayManager,
     activity: Activity,
     onClose: () -> Unit,
 ) {
@@ -235,6 +237,56 @@ fun ShopDialog(
                         .clickable { billing.restorePurchases() }
                         .padding(vertical = 6.dp),
                 )
+
+                // ---- UPI / cards via Razorpay (direct-distribution builds only;
+                //      Play-Store builds keep Google Play Billing above — policy)
+                if (razorpay.enabled) {
+                    SpacerH(10.dp)
+                    BasicText(
+                        "UPI / CARDS — RAZORPAY",
+                        style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp),
+                    )
+                    SpacerH(8.dp)
+                    for (p in RazorpayManager.PRICES_INR.entries) {
+                        val owned = p.key == BillingManager.PRODUCT_NO_ADS && prefs.removeAds.value
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            BasicText(
+                                RazorpayManager.LABELS[p.key] ?: p.key,
+                                style = TextStyle(color = Dark, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (owned) {
+                                BasicText(
+                                    "OWNED",
+                                    style = TextStyle(color = Color(0xFF2FA84F), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                )
+                            } else {
+                                SquishyButton(
+                                    "₹${p.value}",
+                                    onClick = { razorpay.buy(activity, p.key) },
+                                    modifier = Modifier.width(92.dp),
+                                    top = Color(0xFF2DD4BF),
+                                    bottom = Color(0xFF0D9488),
+                                    height = 34.dp,
+                                    textSize = 13.dp,
+                                )
+                            }
+                        }
+                    }
+                    razorpay.status.value?.let { msg ->
+                        SpacerH(6.dp)
+                        BasicText(
+                            msg,
+                            style = TextStyle(color = Muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
             SpacerH(8.dp)
             SquishyButton("CLOSE", onClick = onClose, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 46.dp, textSize = 15.dp)

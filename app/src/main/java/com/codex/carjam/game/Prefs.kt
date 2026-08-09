@@ -62,6 +62,10 @@ class Prefs(context: Context) {
     var eventSeenDay = mutableIntStateOf(sp.getInt(KEY_EVENT_DAY, -1))
         private set
 
+    /** First-run onboarding (Google Play Games connect sheet) completed/dismissed. */
+    var welcomed = mutableStateOf(sp.getBoolean(KEY_WELCOMED, false))
+        private set
+
     val myReferralCode: String get() = Referral.myCode(installSalt)
 
     /** Leaderboard rating: level progress dominates, small coin/streak flavour on top. */
@@ -217,6 +221,11 @@ class Prefs(context: Context) {
         sp.edit().putInt(KEY_EVENT_DAY, epochDay).apply()
     }
 
+    fun markWelcomed() {
+        welcomed.value = true
+        sp.edit().putBoolean(KEY_WELCOMED, true).apply()
+    }
+
     companion object {
         const val AVATAR_COUNT = 8
         private const val MAX_COINS = 10_000_000
@@ -246,6 +255,7 @@ class Prefs(context: Context) {
         private const val KEY_GEMS_S = "gems.s"
         private const val KEY_GEMS_B = "gems.b"
         private const val KEY_EVENT_DAY = "event_seen_day"
+        private const val KEY_WELCOMED = "welcomed"
         private const val KEY_TAMPER = "tamper_flags"
     }
 }

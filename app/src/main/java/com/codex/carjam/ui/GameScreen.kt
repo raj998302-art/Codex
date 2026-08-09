@@ -41,6 +41,7 @@ import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
+import com.codex.carjam.monetize.RazorpayManager
 import kotlin.math.min
 
 @Composable
@@ -52,6 +53,7 @@ fun GameScreen(
     sound: SoundManager,
     ads: AdsManager,
     billing: BillingManager,
+    razorpay: RazorpayManager,
     onHome: () -> Unit,
     onNext: () -> Unit,
     onRetry: () -> Unit,
@@ -234,6 +236,7 @@ fun GameScreen(
                     billing = billing,
                     ads = ads,
                     prefs = prefs,
+                    razorpay = razorpay,
                     activity = act,
                     onClose = { showShop = false },
                 )

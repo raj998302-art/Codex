@@ -19,6 +19,12 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
 
+        <!-- Play Games Services project number (Play Console → Play Games Services →
+             Setup & management → Configuration). Replace @string/games_app_id value. -->
+        <meta-data
+            android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/games_app_id" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

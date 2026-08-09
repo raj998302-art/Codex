@@ -1,6 +1,7 @@
 package com.codex.carjam.ui
 
 import android.app.Activity
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -42,8 +43,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -59,6 +62,7 @@ import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
 import com.codex.carjam.monetize.PlayGamesManager
+import com.codex.carjam.monetize.RazorpayManager
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -72,6 +76,7 @@ fun HomeScreen(
     ads: AdsManager,
     billing: BillingManager,
     pgs: PlayGamesManager,
+    razorpay: RazorpayManager,
     online: Boolean,
     onPlay: (Int) -> Unit,
     onPractice: () -> Unit,
@@ -84,6 +89,7 @@ fun HomeScreen(
     var showEvents by remember { mutableStateOf(false) }
     var showRank by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
+    var showWelcome by remember { mutableStateOf(!prefs.welcomed.value) }
     val theme = LevelTheme.entries[(prefs.maxLevel.intValue - 1) % LevelTheme.entries.size]
     val event = remember { Events.today() }
     val dailyReady = DailyRewards.canClaim(prefs)
@@ -91,10 +97,10 @@ fun HomeScreen(
     LaunchedEffect(online) {
         if (online) activity?.let { pgs.silentCheck(it) }
     }
-    // live-ops popup: pitch today's event once per day
+    // live-ops popup: pitch today's event once per day (after onboarding)
     val todayEpoch = (System.currentTimeMillis() / 86_400_000L).toInt()
     LaunchedEffect(Unit) {
-        if (prefs.eventSeenDay.intValue != todayEpoch) {
+        if (prefs.welcomed.value && prefs.eventSeenDay.intValue != todayEpoch) {
             prefs.markEventSeen(todayEpoch)
             showEvents = true
         }
@@ -110,28 +116,32 @@ fun HomeScreen(
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp),
         ) {
+            // top HUD: gear + flexible identity chip + compact wallets (never overflows)
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 GearButton { sound.tap(); showSettings = true }
-                SpacerW(10.dp)
+                SpacerW(8.dp)
                 Row(
                     Modifier
-                        .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
-                        .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                        .weight(1f)
+                        .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+                        .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
                         .clickable { sound.tap(); showProfile = true }
-                        .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 12.dp),
+                        .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AvatarIcon(prefs.avatarId.intValue, 34.dp)
-                    SpacerW(8.dp)
+                    AvatarIcon(prefs.avatarId.intValue, 30.dp)
+                    SpacerW(6.dp)
                     BasicText(
                         text = prefs.playerName,
-                        style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold),
+                        style = TextStyle(color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.ExtraBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                CoinPill(prefs.coins.intValue, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
-                SpacerW(6.dp)
-                GemPill(prefs.gems.intValue, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
+                SpacerW(8.dp)
+                CoinPill(prefs.coins.intValue, compact = true, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
+                SpacerW(5.dp)
+                GemPill(prefs.gems.intValue, compact = true, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
             }
 
             SpacerH(34.dp)
@@ -157,29 +167,56 @@ fun HomeScreen(
 
             SpacerH(44.dp)
 
-            // big round PLAY button
+            // big round PLAY button with a sonar pulse ring
             val interaction = remember { MutableInteractionSource() }
             val pressed by interaction.collectIsPressedAsState()
+            val playPulse = rememberInfiniteTransition(label = "play-pulse")
+            val pulse by playPulse.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing), RepeatMode.Restart),
+                label = "pulse",
+            )
             Box(
                 Modifier
                     .align(Alignment.CenterHorizontally)
-                    .size(if (pressed) 106.dp else 112.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF6FEE85), Color(0xFF1FA94F))), CircleShape)
-                    .border(6.dp, Color.White, CircleShape)
-                    .clickable(interactionSource = interaction, indication = null) {
-                        sound.tap()
-                        onPlay(prefs.maxLevel.intValue)
-                    },
+                    .size(148.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Canvas(Modifier.size(46.dp)) {
-                    val path = Path().apply {
-                        moveTo(size.width * 0.30f, size.height * 0.16f)
-                        lineTo(size.width * 0.86f, size.height * 0.50f)
-                        lineTo(size.width * 0.30f, size.height * 0.84f)
-                        close()
+                Canvas(Modifier.fillMaxSize()) {
+                    val ringR = 57.dp.toPx() + pulse * 16.dp.toPx()
+                    drawCircle(
+                        color = Color.White.copy(alpha = (1f - pulse) * 0.38f),
+                        radius = ringR,
+                        center = center,
+                        style = Stroke((1f - pulse) * 3.dp.toPx() + 1f),
+                    )
+                    drawCircle(
+                        color = Color(0xFF6FEE85).copy(alpha = (1f - pulse) * 0.16f),
+                        radius = ringR,
+                        center = center,
+                    )
+                }
+                Box(
+                    Modifier
+                        .size(if (pressed) 106.dp else 112.dp)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF6FEE85), Color(0xFF1FA94F))), CircleShape)
+                        .border(6.dp, Color.White, CircleShape)
+                        .clickable(interactionSource = interaction, indication = null) {
+                            sound.tap()
+                            onPlay(prefs.maxLevel.intValue)
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(Modifier.size(46.dp)) {
+                        val path = Path().apply {
+                            moveTo(size.width * 0.30f, size.height * 0.16f)
+                            lineTo(size.width * 0.86f, size.height * 0.50f)
+                            lineTo(size.width * 0.30f, size.height * 0.84f)
+                            close()
+                        }
+                        drawPath(path, Color.White)
                     }
-                    drawPath(path, Color.White)
                 }
             }
             SpacerH(14.dp)
@@ -257,6 +294,19 @@ fun HomeScreen(
         }
 
         // ---- dialogs
+        if (showWelcome) {
+            WelcomeDialog(
+                onContinuePlay = {
+                    prefs.markWelcomed()
+                    showWelcome = false
+                    activity?.let { pgs.signIn(it) }
+                },
+                onGuest = {
+                    prefs.markWelcomed()
+                    showWelcome = false
+                },
+            )
+        }
         if (showLevels) {
             LevelSelectDialog(
                 maxLevel = prefs.maxLevel.intValue,
@@ -275,7 +325,14 @@ fun HomeScreen(
         }
         if (showShop) {
             (LocalActivity())?.let { act ->
-                ShopDialog(billing = billing, ads = ads, prefs = prefs, activity = act, onClose = { showShop = false })
+                ShopDialog(
+                    billing = billing,
+                    ads = ads,
+                    prefs = prefs,
+                    razorpay = razorpay,
+                    activity = act,
+                    onClose = { showShop = false },
+                )
             } ?: run { showShop = false }
         }
         if (showDaily) {

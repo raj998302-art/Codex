@@ -15,6 +15,7 @@ import kotlin.math.sin
 enum class GameIconKind {
     CART, GIFT, CALENDAR, TROPHY, GRAD_CAP, WIFI_OFF, SHIELD, LOCK, PLAY_AD,
     GEM, MEDAL_1, MEDAL_2, MEDAL_3, FIRE, CLOVER, PARKING, MYSTERY, BOLT, COIN_STACK, STAR,
+    GAMEPAD,
 }
 
 /**
@@ -357,6 +358,33 @@ object Icons {
         star(l + s * 0.48f, t + s * 0.38f, s * 0.10f, deep)
     }
 
+    /** Game controller — used for the Google Play Games sign-in prompt. */
+    fun DrawScope.gamepad(l: Float, t: Float, s: Float) {
+        val dark = Color(0xFF2B2B33)
+        // grips
+        drawRoundRect(dark, Offset(l + s * 0.10f, t + s * 0.40f), Size(s * 0.22f, s * 0.42f), borderRadiusFix(s * 0.10f))
+        drawRoundRect(dark, Offset(l + s * 0.68f, t + s * 0.40f), Size(s * 0.22f, s * 0.42f), borderRadiusFix(s * 0.10f))
+        // body outline + face
+        drawRoundRect(dark, Offset(l + s * 0.08f, t + s * 0.24f), Size(s * 0.84f, s * 0.46f), borderRadiusFix(s * 0.20f))
+        drawRoundRect(
+            Brush.linearGradient(listOf(Color(0xFF9E7BFF), Color(0xFF6A45C8))),
+            Offset(l + s * 0.13f, t + s * 0.29f), Size(s * 0.74f, s * 0.36f), borderRadiusFix(s * 0.15f),
+        )
+        // top sheen
+        drawRoundRect(
+            Color.White.copy(alpha = 0.35f),
+            Offset(l + s * 0.20f, t + s * 0.33f), Size(s * 0.60f, s * 0.05f), borderRadiusFix(s * 0.025f),
+        )
+        // d-pad (left)
+        val dp = Color(0xFF23262E)
+        drawRoundRect(dp, Offset(l + s * 0.20f, t + s * 0.415f), Size(s * 0.15f, s * 0.05f), borderRadiusFix(s * 0.02f))
+        drawRoundRect(dp, Offset(l + s * 0.25f, t + s * 0.365f), Size(s * 0.05f, s * 0.15f), borderRadiusFix(s * 0.02f))
+        // action buttons (right)
+        outlineCircle(Offset(l + s * 0.70f, t + s * 0.42f), s * 0.040f, s * 0.020f, Color(0xFF3DDC5F))
+        outlineCircle(Offset(l + s * 0.79f, t + s * 0.50f), s * 0.040f, s * 0.020f, Color(0xFFFF5A5A))
+        outlineCircle(Offset(l + s * 0.61f, t + s * 0.50f), s * 0.040f, s * 0.020f, Color(0xFF3B9BFF))
+    }
+
     /** Routes an icon kind to its painter. */
     fun DrawScope.icon(kind: GameIconKind, l: Float, t: Float, s: Float) {
         when (kind) {
@@ -380,6 +408,7 @@ object Icons {
             GameIconKind.BOLT -> bolt(l, t, s)
             GameIconKind.COIN_STACK -> coinStack(l, t, s)
             GameIconKind.STAR -> star(l + s / 2f, t + s / 2f, s * 0.5f, Color(0xFFFFD32E))
+            GameIconKind.GAMEPAD -> gamepad(l, t, s)
         }
     }
 }

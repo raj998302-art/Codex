@@ -203,61 +203,95 @@ fun GameIcon(kind: GameIconKind, sizeDp: Dp = 26.dp, modifier: Modifier = Modifi
     }
 }
 
-/** Diamond wallet pill (gems). */
+/** Diamond wallet pill (gems). [compact] shrinks it for crowded HUD rows. */
 @Composable
-fun GemPill(gems: Int, modifier: Modifier = Modifier, onPlus: () -> Unit = {}) {
+fun GemPill(gems: Int, modifier: Modifier = Modifier, compact: Boolean = false, onPlus: () -> Unit = {}) {
+    val shape = RoundedCornerShape(if (compact) 18.dp else 24.dp)
     Row(
         modifier
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-            .border(2.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
-            .padding(start = 6.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            .background(Color.Black.copy(alpha = 0.5f), shape)
+            .border(2.dp, Color.White.copy(alpha = 0.35f), shape)
+            .padding(
+                start = if (compact) 5.dp else 6.dp,
+                top = if (compact) 3.dp else 4.dp,
+                bottom = if (compact) 3.dp else 4.dp,
+                end = if (compact) 3.dp else 4.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        GameIcon(GameIconKind.GEM, 24.dp)
-        SpacerW(6.dp)
+        GameIcon(GameIconKind.GEM, if (compact) 19.dp else 24.dp)
+        SpacerW(if (compact) 4.dp else 6.dp)
         BasicText(
             text = "$gems",
-            style = TextStyle(color = Color(0xFF9BE7FF), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold),
+            style = TextStyle(
+                color = Color(0xFF9BE7FF),
+                fontSize = if (compact) 15.sp else 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+            ),
         )
-        SpacerW(8.dp)
+        SpacerW(if (compact) 5.dp else 8.dp)
         Box(
             Modifier
-                .size(26.dp)
+                .size(if (compact) 21.dp else 26.dp)
                 .background(Color(0xFF38BDF8), CircleShape)
                 .border(2.dp, Color.White.copy(alpha = 0.7f), CircleShape)
                 .clickable { onPlus() },
             contentAlignment = Alignment.Center,
         ) {
-            BasicText("+", style = TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold))
+            BasicText(
+                "+",
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = if (compact) 13.sp else 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            )
         }
     }
 }
 
 @Composable
-fun CoinPill(coins: Int, modifier: Modifier = Modifier, onPlus: () -> Unit = {}) {
+fun CoinPill(coins: Int, modifier: Modifier = Modifier, compact: Boolean = false, onPlus: () -> Unit = {}) {
+    val shape = RoundedCornerShape(if (compact) 18.dp else 24.dp)
     Row(
         modifier
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-            .border(2.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
-            .padding(start = 6.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            .background(Color.Black.copy(alpha = 0.5f), shape)
+            .border(2.dp, Color.White.copy(alpha = 0.35f), shape)
+            .padding(
+                start = if (compact) 5.dp else 6.dp,
+                top = if (compact) 3.dp else 4.dp,
+                bottom = if (compact) 3.dp else 4.dp,
+                end = if (compact) 3.dp else 4.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CoinIcon(26.dp)
-        SpacerW(8.dp)
+        CoinIcon(if (compact) 21.dp else 26.dp)
+        SpacerW(if (compact) 5.dp else 8.dp)
         BasicText(
             text = "$coins",
-            style = TextStyle(color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold),
+            style = TextStyle(
+                color = Color.White,
+                fontSize = if (compact) 15.sp else 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+            ),
         )
-        SpacerW(8.dp)
+        SpacerW(if (compact) 5.dp else 8.dp)
         Box(
             Modifier
-                .size(26.dp)
+                .size(if (compact) 21.dp else 26.dp)
                 .background(Color(0xFF3DDC5F), CircleShape)
                 .border(2.dp, Color.White.copy(alpha = 0.7f), CircleShape)
                 .clickable { onPlus() },
             contentAlignment = Alignment.Center,
         ) {
-            BasicText("+", style = TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold))
+            BasicText(
+                "+",
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = if (compact) 13.sp else 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            )
         }
     }
 }

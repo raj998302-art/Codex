@@ -1,6 +1,7 @@
 package com.codex.carjam.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,12 +24,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codex.carjam.R
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.render.GameIconKind
 
@@ -120,7 +125,19 @@ fun WinDialog(level: Int, coinsEarned: Int, onNext: () -> Unit, onHome: () -> Un
                 text = "Level $level cleared",
                 style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
             )
-            SpacerH(14.dp)
+            SpacerH(12.dp)
+            // showroom celebration strip (the 3D hero ride)
+            Image(
+                painter = painterResource(R.drawable.hero_car),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Brush.verticalGradient(listOf(Color(0xFFF7FBFF), Color(0xFFD9EAFB)))),
+                contentScale = ContentScale.Fit,
+            )
+            SpacerH(12.dp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CoinIcon(34.dp)
                 SpacerW(10.dp)

@@ -54,9 +54,27 @@ sources without touching the UI.
 2. **AdMob** — replace the Google TEST ids in `AdsManager` (`BANNER_ID`,
    `INTERSTITIAL_ID`, `REWARDED_ID`) and the `APPLICATION_ID` meta-data in
    `AndroidManifest.xml` with your own units; buy `remove_ads` to hide all ads.
-3. **Play Games Services** — link the app in Play Console → Play Games Services →
-   configuration; sign-in then upgrades the local profile automatically.
-4. Replace the debug signing config in `app/build.gradle.kts` with your keystore.
+3. **Play Games Services (Google Play sign-in)** — full setup:
+   1. Play Console → your app → **Grow → Play Games Services → Setup & management**.
+   2. Create a Play Games Services project (it links/creates a Google Cloud project).
+   3. In the linked Cloud project, enable the **Google Play Games Services API** and
+      create an **OAuth 2.0 Android client** with your package name
+      (`com.codex.carjam` or `com.codex.carjam.debug`) + the **SHA-1** of your signing
+      key (find it under Play Console → Release → Setup → **App integrity**).
+   4. Back in Play Console, save & **publish** the Play Games Services configuration,
+      and add your Gmail to **Testers** while it is in testing.
+   5. Copy the 12-digit **project number** from the configuration page into
+      `app/src/main/res/values/games_services.xml` (`games_app_id`).
+   The game then shows the official account picker at first launch, silent-signs
+   every session, and syncs the gamer name into PROFILE. Until then it no-ops
+   gracefully — nothing breaks.
+4. **Razorpay (optional — direct-distribution builds only!)** — Google Play policy
+   *requires* Play Billing for digital goods inside Play-Store builds, so Razorpay
+   (`UPI / cards / netbanking`) is compiled in but switched OFF. For a website/side-load
+   APK you can enable it: put your Key ID in `RazorpayManager.KEY_ID`, set
+   `ENABLED = true`, and the SHOP grows a "UPI / CARDS — RAZORPAY" section that mirrors
+   the same packs. For production, verify payment signatures on a small backend.
+5. Replace the debug signing config in `app/build.gradle.kts` with your keystore.
 
 
 ## v2.1 polish (AAA feedback pass)
@@ -68,6 +86,19 @@ sources without touching the UI.
 | **💎 Gems currency** | Second premium currency (vault-secured): shop packs `gems_80/250/700`, daily-reward day 3/6/7 grants, gem-revive (25 gems) next to the ad revive |
 | **Shop pack art** | AI-generated banners for coin packs and gem packs (like the ₹99 No-Ads pack) |
 | **Packed boards** | Difficulty ramp rebuilt: 17 → 60+ cars, 9-col grids, mixed-angle dense diagonals, 7 late-game slots — the jam now looks full |
+
+## v2.2 (creator drop)
+
+| System | What changed |
+| --- | --- |
+| **AI key art pipeline** | Concept renders generated for the brand: full-bleed cinematic `splash_art` behind a redesigned splash (shimmer progress bar, studio line) and a 3D `hero_car` showroom asset (background-removed) in the welcome screen + level-complete celebration |
+| **Car models v3** | Painter rebuilt to match the renders: layered contact shadow, five-spoke alloy wheels, pearlescent 4-stop paint, panel seams, glasshouse with sky reflections, LED headlights/taillights, grille + license plate, mirrors, door handles, taxi check band, police lightbar, bus roof vents |
+| **NPC models v3** | The gummy citizens gained happy faces (eyes with catch-lights, smile, blush), hands and a head sheen — straight from the key art |
+| **Home HUD fit fix** | Identity chip is flexible (ellipsizes), coin/gem pills get a compact mode — the top bar can no longer overflow on any screen width |
+| **First-run onboarding** | New `WelcomeDialog`: hero art + "Continue with Google Play Games" (opens the official account picker) or Play-as-guest; daily-event popup waits until onboarding is done |
+| **Play Games plumbing** | `games_app_id` string resource + manifest meta-data wired — paste your PGS project number and sign-in goes live |
+| **Razorpay module** | `RazorpayManager` (Checkout 1.6.41, pinned core) with UPI/cards checkout, pack mirror + reward crediting; disabled by default for Play-Store policy compliance |
+| **Polish** | Sonar pulse ring on PLAY, level-complete showroom strip, v2.2/versionCode 3 |
 
 ## Project layout
 

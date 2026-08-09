@@ -71,11 +71,12 @@ enum class CarType(val seats: Int, val len: Float, val wid: Float) {
     SEDAN(seats = 4, len = 150f, wid = 84f),
     VAN(seats = 5, len = 168f, wid = 88f),
     BUS(seats = 6, len = 214f, wid = 90f),
+    TOURIST(seats = 7, len = 228f, wid = 94f),
 }
 
-enum class LayoutStyle(val minLevel: Int) { GRID(1), HEAP(2), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13) }
+enum class LayoutStyle(val minLevel: Int) { GRID(1), HEAP(2), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13), OTHER(20) }
 
-enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT }
+enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT, EVENT }
 
 /** Full colour script for a level, mirroring the themed boards in the screenshots. */
 enum class LevelTheme(

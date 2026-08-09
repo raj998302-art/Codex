@@ -58,6 +58,17 @@ sources without touching the UI.
    configuration; sign-in then upgrades the local profile automatically.
 4. Replace the debug signing config in `app/build.gradle.kts` with your keystore.
 
+
+## v2.1 polish (AAA feedback pass)
+
+| System | What changed |
+| --- | --- |
+| **Zero-emoji UI** | 20 hand-drawn vector icons in `game/render/Icons.kt` (cart, gift, trophy, gems, medals, locks…) replace every emoji in the interface |
+| **Event banners** | Designed `EventBannerCard` with radial-burst art on home, in the events dialog, and as a once-per-day live-ops popup |
+| **💎 Gems currency** | Second premium currency (vault-secured): shop packs `gems_80/250/700`, daily-reward day 3/6/7 grants, gem-revive (25 gems) next to the ad revive |
+| **Shop pack art** | AI-generated banners for coin packs and gem packs (like the ₹99 No-Ads pack) |
+| **Packed boards** | Difficulty ramp rebuilt: 17 → 60+ cars, 9-col grids, mixed-angle dense diagonals, 7 late-game slots — the jam now looks full |
+
 ## Project layout
 
 ```

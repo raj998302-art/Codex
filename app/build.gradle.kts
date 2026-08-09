@@ -14,8 +14,8 @@ android {
         applicationId = "com.codex.carjam"
         minSdk = 24
         targetSdk = 34
-        versionCode = 14
-        versionName = "3.3"
+        versionCode = 12
+        versionName = "3.1"
     }
 
     buildTypes {

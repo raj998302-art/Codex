@@ -213,6 +213,16 @@ player's own saved stats (still zero demo bots).
 | **Next-unlock teaser** | A pill on the win panel names the next map/board waiting ahead ("AT L21: Lava MAP") |
 | **METRO train polish** | Reference-look: orange cab stripe with shine line, door seams, platform railing behind the queue band |
 
+## v3.1 (home screen redesign — reference layout)
+
+| System | What changed |
+| --- | --- |
+| **Reference-style home layout** | Opponent screenshot layout adopted: top HUD (gear, avatar+name chip, coin/gem bars), then a LEVEL ROAD strip — your selected garage ride in a bubble, dark road bar with amber progress fill and "Unlock at Lv.N" caption, padlock cap on the right |
+| **Pedestal teaser columns** | Left/right stone pedestals with gold toys ("Unlock at Lv.4 / 11 / 13 / 20 / 26 / 45") — hand-drawn wheel, bag, chest, VS disc, star, TV pup and burger painters (zero emoji), little lock bubble on each locked pedestal |
+| **Piggy bank pedestal (live)** | Right column top: real piggy bank pedestal with the fill caption `X/800` (white pill) and a red `!` bubble when FULL — taps straight into the Piggy Bank dialog |
+| **Car-Tour event banner + giant LEVEL button** | Centre column: slim logo, the live-ops banner with a red `!` badge when today's event carries boosts, a huge yellow `LEVEL N` squishy pill, plus small LEVELS and PRACTICE buttons underneath |
+| **5-tab bottom nav** | Blue gradient nav bar (GIFT / QUESTS / raised PLAY cap / SHOP / RANK) with red dot badges for pending gifts and claimable quests; centre cap is a white house disc with the green play triangle |
+
 ## v3.0 (mega drop: Eliminate + Piggy Bank + Cards + Frames + Podium)
 
 | System | What changed |

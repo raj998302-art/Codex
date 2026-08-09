@@ -87,6 +87,7 @@ fun GameScreen(
                 }
 
                 Fx.CHAINBREAK -> sound.chainBreak()
+                Fx.UNLOCK -> sound.unlock()
                 Fx.BLOCKED -> {
                     sound.blocked()
                     if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -154,6 +155,7 @@ fun GameScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showShop by remember { mutableStateOf(false) }
     var showBoostShop by remember { mutableStateOf(false) }
+    var showMoreSpot by remember { mutableStateOf(false) }
     var hammerArmed by remember { mutableStateOf(false) }
     var boostGift by remember { mutableStateOf(false) }
 
@@ -175,7 +177,14 @@ fun GameScreen(
                         val oy = (viewSize.height - Dim.VH * s) / 2f
                         val gx = (off.x - ox) / s
                         val gy = (off.y - oy) / s
-                        if (hammerArmed) {
+                        // locked More-Spot slots open their purchase dialog
+                        val lockedHit = engine.lockedSlotCenters().any { c ->
+                            kotlin.math.abs(gx - c.x) < 84f && kotlin.math.abs(gy - c.y) < 130f
+                        }
+                        if (lockedHit && engine.result == GameResult.PLAYING) {
+                            showMoreSpot = true
+                            sound.tap()
+                        } else if (hammerArmed) {
                             // armed hammer: only shatters ice, never moves cars,
                             // and is only spent on a successful smash
                             val hit = engine.hitCarAt(gx, gy)
@@ -233,9 +242,23 @@ fun GameScreen(
         engine.frame.longValue
         val result = engine.result
         if (result == GameResult.WON && engine.resultAge() > 900f) {
+            val wonCoins = if (practice) 0 else engine.coinsEarned + winBonus
             WinDialog(
                 level = level,
-                coinsEarned = if (practice) 0 else engine.coinsEarned + winBonus,
+                coinsEarned = wonCoins,
+                practice = practice,
+                prefs = prefs,
+                canMultiply = ads.rewardedReady.value,
+                onMultiplyX5 = {
+                    val act = view.context as? Activity
+                    if (act != null) {
+                        ads.showRewarded(act, onReward = {
+                            prefs.addCoins(wonCoins * 4)
+                            CloudSave.sync(prefs, force = true)
+                            onNext()
+                        })
+                    }
+                },
                 onNext = {
                     if (!practice) (view.context as? Activity)?.let { act -> ads.maybeShowInterstitial(act, level) }
                     onNext()
@@ -364,6 +387,28 @@ fun GameScreen(
 
         if (showBoostShop) {
             BoosterShopDialog(prefs = prefs, onClose = { showBoostShop = false })
+        }
+
+        if (showMoreSpot) {
+            val act = view.context as? Activity
+            MoreSpotDialog(
+                prefs = prefs,
+                rewardedReady = ads.rewardedReady.value && act != null,
+                onCoin = {
+                    if (prefs.coins.intValue >= 100 && engine.unlockSlot()) {
+                        prefs.addCoins(-100)
+                        CloudSave.sync(prefs, force = true)
+                    }
+                    showMoreSpot = false
+                },
+                onFree = {
+                    if (act != null) {
+                        ads.showRewarded(act, onReward = { engine.unlockSlot() })
+                    }
+                    showMoreSpot = false
+                },
+                onClose = { showMoreSpot = false },
+            )
         }
 
         if (showSettings) {

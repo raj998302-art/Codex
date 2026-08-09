@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.min
 import kotlin.random.Random
 
-enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK, HAMMER, SHUFFLE, CHAINED, CHAINBREAK }
+enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK, HAMMER, SHUFFLE, CHAINED, CHAINBREAK, UNLOCK }
 
 enum class GameResult { PLAYING, WON, LOST }
 
@@ -128,6 +128,10 @@ class GameEngine(
         private set
     var coinMult = 1f
 
+    /** Locked spare spots the player paid to open (this attempt only). */
+    var unlockedExtra = 0
+        private set
+
     val cars: List<CarEnt> = spec.cars.map { CarEnt(it) }
     val waiting = ArrayList<PassengerEnt>()
     private val backlog = ArrayList<CarColor>()
@@ -159,9 +163,31 @@ class GameEngine(
 
     fun remainingPassengers(): Int = waiting.size + backlog.size + boardAnims.size
 
-    fun effectiveSlots(): Int = spec.slotCount + bonusSlots
+    /** Usable parking slots right now (paid extras + revive bonuses included). */
+    fun effectiveSlots(): Int = spec.slotCount + unlockedExtra + bonusSlots
 
-    fun slotCenters(): List<Pt> = Dim.slotCenters(effectiveSlots())
+    /** Every slot shown in the band, including the still-locked spares. */
+    fun slotsTotalShown(): Int = spec.slotCount + spec.lockedSlots + bonusSlots
+
+    fun slotCenters(): List<Pt> = Dim.slotCenters(slotsTotalShown())
+
+    fun lockedRemaining(): Int = (spec.lockedSlots - unlockedExtra).coerceAtLeast(0)
+
+    /** Centres of the still-locked spare slots (the tappable, padlock ones). */
+    fun lockedSlotCenters(): List<Pt> {
+        val n = lockedRemaining()
+        if (n <= 0) return emptyList()
+        return slotCenters().takeLast(n)
+    }
+
+    /** More Spot purchase: open one locked spare. False when none remain. */
+    fun unlockSlot(): Boolean {
+        if (result != GameResult.PLAYING || lockedRemaining() <= 0) return false
+        unlockedExtra++
+        lastActionMs = ms
+        onFx(Fx.UNLOCK)
+        return true
+    }
 
     fun grantBonusSlots(n: Int) {
         bonusSlots += n

@@ -73,7 +73,7 @@ enum class CarType(val seats: Int, val len: Float, val wid: Float) {
     BUS(seats = 6, len = 214f, wid = 90f),
 }
 
-enum class LayoutStyle(val minLevel: Int) { GRID(1), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13) }
+enum class LayoutStyle(val minLevel: Int) { GRID(1), HEAP(2), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13) }
 
 enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT }
 
@@ -193,6 +193,8 @@ data class LevelSpec(
     val gateSide: Int = -1,
     /** Arena exits required to lift the gate. */
     val gateNeed: Int = 0,
+    /** Extra parking slots shown locked; buyable with coins or a rewarded ad. */
+    val lockedSlots: Int = 0,
 ) {
     val totalPassengers: Int get() = queue.size
 }

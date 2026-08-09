@@ -1,6 +1,11 @@
 package com.codex.carjam.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.R
 import com.codex.carjam.game.CloudSave
+import com.codex.carjam.game.LayoutStyle
+import com.codex.carjam.game.LeaderboardApi
+import com.codex.carjam.game.LevelTheme
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.GameIconKind
+import kotlinx.coroutines.delay
 
 @Composable
 private fun DialogTitle(text: String, fill: Color, outline: Color) {
@@ -189,7 +199,88 @@ fun SettingsDialog(
 }
 
 @Composable
-fun WinDialog(level: Int, coinsEarned: Int, onNext: () -> Unit, onHome: () -> Unit) {
+private fun LeagueRow(rank: Int, name: String, rating: Int, highlight: Boolean) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(
+                if (highlight) Color(0xFFFFC93C) else Color.White,
+                RoundedCornerShape(10.dp),
+            )
+            .border(1.5.dp, if (highlight) Color(0xFFE09B13) else Color(0xFFEAD9BC), RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicText(
+            "#$rank",
+            style = TextStyle(
+                color = if (rank == 1) Color(0xFFB8860B) else Color(0xFF8C6A3F),
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+            modifier = Modifier.width(42.dp),
+        )
+        BasicText(
+            name.uppercase(),
+            style = TextStyle(color = Color(0xFF4A3826), fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold),
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+        GameIcon(GameIconKind.TROPHY, 14.dp)
+        SpacerW(4.dp)
+        BasicText("$rating", style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold))
+    }
+}
+
+@Composable
+fun WinDialog(
+    level: Int,
+    coinsEarned: Int,
+    practice: Boolean,
+    prefs: Prefs,
+    canMultiply: Boolean,
+    onMultiplyX5: () -> Unit,
+    onNext: () -> Unit,
+    onHome: () -> Unit,
+) {
+    // global league (live from the MongoDB leaderboard) + rank-climb animation
+    var top by remember { mutableStateOf<List<LeaderboardApi.Entry>?>(null) }
+    var me by remember { mutableStateOf<LeaderboardApi.Entry?>(null) }
+    var panelIn by remember { mutableStateOf(false) }
+    var climb by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!practice) {
+            LeaderboardApi.fetchTop(prefs.deviceId) { t, m ->
+                top = t
+                me = m
+                panelIn = true
+            }
+            delay(700)
+            climb = true
+        }
+    }
+    val shownRank by animateIntAsState(
+        targetValue = if (climb) (me?.rank ?: 0) else (me?.rank ?: 0) + 15,
+        animationSpec = tween(900),
+        label = "rankClimb",
+    )
+    // what unlocks next? (maps, boards) — the teaser strip keeps players chasing
+    val nextUnlock = remember(level) {
+        val ups = ArrayList<Pair<Int, String>>()
+        for (t in LevelTheme.entries) {
+            if (t.minLevel > level) {
+                ups.add(t.minLevel to t.name.lowercase().replaceFirstChar { it.uppercase() } + " MAP")
+            }
+        }
+        for (s in LayoutStyle.entries) {
+            if (s.minLevel > level) {
+                ups.add(s.minLevel to s.name.lowercase().replaceFirstChar { it.uppercase() } + " BOARD")
+            }
+        }
+        ups.minByOrNull { it.first }
+    }
+
     DialogOverlay {
         PanelCard {
             DialogTitle("LEVEL COMPLETE!", fill = Color(0xFFFFC93C), outline = Color(0xFF7A3E00))
@@ -198,35 +289,95 @@ fun WinDialog(level: Int, coinsEarned: Int, onNext: () -> Unit, onHome: () -> Un
                 text = "Level $level cleared",
                 style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
             )
-            SpacerH(12.dp)
-            // showroom celebration strip (the 3D hero ride)
-            Image(
-                painter = painterResource(R.drawable.hero_car),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFFF7FBFF), Color(0xFFD9EAFB)))),
-                contentScale = ContentScale.Fit,
-            )
-            SpacerH(12.dp)
+            SpacerH(10.dp)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CoinIcon(34.dp)
+                CoinIcon(32.dp)
                 SpacerW(10.dp)
                 BasicText(
                     text = "+$coinsEarned",
-                    style = TextStyle(color = Color(0xFF4A3826), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold),
+                    style = TextStyle(color = Color(0xFF4A3826), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold),
                 )
             }
-            SpacerH(18.dp)
-            SquishyButton("NEXT LEVEL", onClick = onNext)
+
+            // ---- global league (your rank climbing the table)
+            me?.let { you ->
+                SpacerH(10.dp)
+                AnimatedVisibility(
+                    visible = panelIn,
+                    enter = slideInVertically(tween(450)) { it / 3 } + fadeIn(tween(450)),
+                ) {
+                    androidx.compose.foundation.layout.Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            GameIcon(GameIconKind.TROPHY, 26.dp)
+                            SpacerW(6.dp)
+                            BasicText(
+                                "GLOBAL LEAGUE",
+                                style = TextStyle(color = Color(0xFF7A4A12), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp),
+                            )
+                            SpacerW(6.dp)
+                            BasicText(
+                                "#$shownRank",
+                                style = TextStyle(color = Color(0xFFB8860B), fontSize = 20.sp, fontWeight = FontWeight.Black),
+                            )
+                        }
+                        SpacerH(6.dp)
+                        val rows = (top?.take(3) ?: emptyList())
+                        for (e in rows) {
+                            LeagueRow(e.rank, e.name, e.rating, highlight = e.deviceId == you.deviceId)
+                            SpacerH(4.dp)
+                        }
+                        if (you.rank > 3) {
+                            LeagueRow(you.rank, "YOU", you.rating, highlight = true)
+                            SpacerH(4.dp)
+                        }
+                    }
+                }
+            }
+
+            // ---- next unlock teaser
+            if (nextUnlock != null) {
+                SpacerH(8.dp)
+                Pill(
+                    "AT L${nextUnlock.first}: ${nextUnlock.second}",
+                    bg = Color(0xFF7E3FC8).copy(alpha = 0.85f),
+                    icon = { GameIcon(GameIconKind.LOCK, 16.dp) },
+                )
+            }
+
+            SpacerH(14.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SquishyButton(
+                    "NEXT LEVEL",
+                    onClick = onNext,
+                    modifier = Modifier.weight(1f),
+                    height = 52.dp,
+                    textSize = 17.dp,
+                )
+                if (!practice) {
+                    SpacerW(10.dp)
+                    SquishyButton(
+                        "GET X5",
+                        onClick = { if (canMultiply) onMultiplyX5() },
+                        modifier = Modifier.weight(1f),
+                        top = if (canMultiply) Color(0xFF6FEE85) else Color(0xFFC7BBA6),
+                        bottom = if (canMultiply) Color(0xFF1FA94F) else Color(0xFFA89B86),
+                        height = 52.dp,
+                        textSize = 17.dp,
+                        icon = { GameIcon(GameIconKind.PLAY_AD, 22.dp) },
+                    )
+                }
+            }
             SpacerH(10.dp)
             SquishyButton(
                 "HOME",
                 onClick = onHome,
                 top = Color(0xFF9AA5B1),
                 bottom = Color(0xFF6E7883),
+                height = 46.dp,
+                textSize = 15.dp,
             )
             SpacerH(4.dp)
         }
@@ -558,6 +709,72 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
                 }
                 SpacerH(8.dp)
             }
+            SquishyButton(
+                "CLOSE",
+                onClick = onClose,
+                top = Color(0xFF9AA5B1),
+                bottom = Color(0xFF6E7883),
+                height = 44.dp,
+                textSize = 15.dp,
+            )
+            SpacerH(4.dp)
+        }
+    }
+}
+
+/** More Spot: open a locked spare parking slot for this level, coins or ad. */
+@Composable
+fun MoreSpotDialog(
+    prefs: Prefs,
+    rewardedReady: Boolean,
+    onCoin: () -> Unit,
+    onFree: () -> Unit,
+    onClose: () -> Unit,
+    price: Int = 100,
+) {
+    DialogOverlay {
+        PanelCard(Modifier.padding(20.dp).width(340.dp)) {
+            DialogTitleText("MORE SPOT")
+            SpacerH(10.dp)
+            GameIcon(GameIconKind.PARKING, 64.dp)
+            SpacerH(8.dp)
+            BasicText(
+                "Unlock one extra parking spot for this level — more room to untangle the jam!",
+                style = TextStyle(
+                    color = Color(0xFF8C6A3F),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SpacerH(14.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SquishyButton(
+                    "$price",
+                    onClick = { if (prefs.coins.intValue >= price) onCoin() },
+                    modifier = Modifier.weight(1f),
+                    top = if (prefs.coins.intValue >= price) Color(0xFF6FEE85) else Color(0xFFC7BBA6),
+                    bottom = if (prefs.coins.intValue >= price) Color(0xFF1FA94F) else Color(0xFFA89B86),
+                    height = 50.dp,
+                    textSize = 17.dp,
+                    icon = { CoinIcon(20.dp) },
+                )
+                if (rewardedReady) {
+                    SpacerW(10.dp)
+                    SquishyButton(
+                        "FREE",
+                        onClick = onFree,
+                        modifier = Modifier.weight(1f),
+                        top = Color(0xFFFFCF5C),
+                        bottom = Color(0xFFE09B13),
+                        height = 50.dp,
+                        textSize = 17.dp,
+                        icon = { GameIcon(GameIconKind.PLAY_AD, 22.dp) },
+                    )
+                }
+            }
+            SpacerH(10.dp)
             SquishyButton(
                 "CLOSE",
                 onClick = onClose,

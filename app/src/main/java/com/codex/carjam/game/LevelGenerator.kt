@@ -46,9 +46,11 @@ object LevelGenerator {
 
     fun generate(level: Int, mysteryBoost: Int = 0): LevelSpec {
         // Maps + layouts keep unlocking as you climb: new themes join the
-        // rotation at their minLevel, so the game keeps feeling fresh.
+        // rotation at their minLevel, so the game keeps feeling fresh. HEAP is
+        // in the pool twice — the dumped-pile board is the signature look.
         val themePool = LevelTheme.entries.filter { level >= it.minLevel }
-        val stylePool = LayoutStyle.entries.filter { level >= it.minLevel }
+        val styleBase = LayoutStyle.entries.filter { level >= it.minLevel }
+        val stylePool = if (styleBase.contains(LayoutStyle.HEAP)) styleBase + LayoutStyle.HEAP else styleBase
         val theme = themePool[(level - 1) % themePool.size]
         val style = stylePool[(level - 1) % stylePool.size]
         val slotCount = when {
@@ -65,9 +67,14 @@ object LevelGenerator {
             LayoutStyle.SPIRAL -> 52
             LayoutStyle.DIAGONAL -> 44
             LayoutStyle.HEART -> 52
+            LayoutStyle.HEAP -> 58
         }
         val baseCount = min((14 + level * 3), styleCap).coerceAtLeast(14)
         val baseSeed = level * 7919 + 17
+
+        // Locked bonus spots (More Spot): a spare slot is visible but barred —
+        // unlockable with coins or an ad, per level attempt.
+        val lockedSlots = if (level >= 30) 2 else if (level >= 6) 1 else 0
 
         for (attempt in 0 until 30) {
             val count = (baseCount - attempt / 5).coerceAtLeast(14)
@@ -174,7 +181,7 @@ object LevelGenerator {
                     frozen = p.frozen, chainKey = p.chainKey,
                 )
             }
-            return LevelSpec(level, theme, style, slotCount, cars, queue, gateSide = gateSide, gateNeed = gateNeed)
+            return LevelSpec(level, theme, style, slotCount, cars, queue, gateSide = gateSide, gateNeed = gateNeed, lockedSlots = lockedSlots)
         }
 
         // Deterministic emergency fallback: sparse all-north grid, trivially solvable.
@@ -240,6 +247,7 @@ object LevelGenerator {
             LayoutStyle.SPIRAL -> spiralPoints(count)
             LayoutStyle.HEART -> heartPoints(count)
             LayoutStyle.DISC -> null
+            LayoutStyle.HEAP -> null
         }
         val allowBig = when (style) {
             LayoutStyle.GRID -> {
@@ -349,7 +357,35 @@ object LevelGenerator {
             }
 
             LayoutStyle.DISC -> return scatterCandidate(type, rng)
+            LayoutStyle.HEAP -> return heapCandidate(type, rng)
         }
+    }
+
+    /**
+     * The dumped-pile board: cars mound up in the middle like a junk heap,
+     * mostly diagonal with pile jitter — the Play Store reference look. The
+     * bell-distributed radius keeps the centre busy and the edges breathable.
+     */
+    private fun heapCandidate(type: CarType, rng: Random): Vec3 {
+        val cx = (placeL + placeR) / 2f
+        val cy = (placeT + placeB) / 2f
+        val rx = (placeR - placeL) / 2f - 42f
+        val ry = (placeB - placeT) / 2f - 42f
+        val a = rng.nextFloat() * (2f * Math.PI.toFloat())
+        // sum of two randoms = bell curve — the mound peaks mid-board, thins at the rim
+        val rad = (rng.nextFloat() + rng.nextFloat()) * 0.5f
+        val spread = rad * 0.98f
+        val x = cx + cos(a) * rx * spread + (rng.nextFloat() - 0.5f) * 16f
+        val y = cy + sin(a) * ry * spread + (rng.nextFloat() - 0.5f) * 16f
+        // mostly diagonal (the heap vibe), some axis cars, loose pile jitter
+        val diagonalBias = rng.nextFloat() < 0.62f
+        val base = if (diagonalBias) {
+            floor(rng.nextFloat() * 4f) * 90f + 45f
+        } else {
+            floor(rng.nextFloat() * 4f) * 90f
+        }
+        val angle = (base + (rng.nextFloat() - 0.5f) * 20f + 360f) % 360f
+        return Vec3(x, y, angle)
     }
 
     private fun scatterCandidate(type: CarType, rng: Random): Vec3 {

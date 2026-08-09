@@ -202,6 +202,17 @@ player's own saved stats (still zero demo bots).
 | **Theme-linked difficulty** | FROZEN boards pack 1.6x frozen cars ("ice bhare" levels), LAVA boards 1.45x chain-locks, NEON NIGHT hides an extra mystery car |
 | **Difficulty ramps harder** | Frozen chance cap raised (0.22 → 0.30, steeper slope), double-tap ice 40% at L25+ and 55% at L40+, second chain-lock gets likelier past L40 — every ramp tweak stays inside the generator's provably-solvable rules |
 
+## v2.9 (reference parity pass)
+
+| System | What changed |
+| --- | --- |
+| **HEAP board** | The signature dumped-pile look from the reference screenshots: cars mound up mid-arena on bell-curved scatter, 62% diagonal with pile jitter. In the rotation twice as often as other layouts, from L2 |
+| **Locked parking slots (More Spot)** | L6+ shows a padlocked spare slot (2 from L30) with a green + badge; tapping opens MORE SPOT — unlock it for the attempt with 100 coins or a rewarded ad. Engine, band rendering (dashed gray box, padlock, plus badge) and purchase dialog all live |
+| **Victory league panel + rank animation** | LEVEL COMPLETE now pulls the live MongoDB leaderboard: GLOBAL LEAGUE rows slide in (top 3 + you pinned), your global rank CLIMBS down the counter with a tween animation — like the Novice League screen, but 100% real players |
+| **GET X5 win multiplier** | Rewarded-ad button on the win dialog multiplies the level payout ×5, then rolls straight to the next level |
+| **Next-unlock teaser** | A pill on the win panel names the next map/board waiting ahead ("AT L21: Lava MAP") |
+| **METRO train polish** | Reference-look: orange cab stripe with shine line, door seams, platform railing behind the queue band |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

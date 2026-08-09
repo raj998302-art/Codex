@@ -174,8 +174,43 @@ object Painters {
         val halfW = min(66f, spacing * 0.44f)
         val halfH = 108f
         val phase = -(engine.ms / 40f)
+        val lockedLeft = engine.lockedRemaining()
         centers.forEachIndexed { i, c ->
-            if (!occupied.contains(i)) {
+            if (lockedLeft > 0 && i >= centers.size - lockedLeft) {
+                // locked More-Spot slot: dark box, padlock, green plus badge
+                drawRoundRect(
+                    color = Color(0x40000000),
+                    topLeft = Offset(c.x - halfW, c.y - halfH),
+                    size = Size(halfW * 2, halfH * 2),
+                    cornerRadius = CornerRadius(26f),
+                )
+                drawRoundRect(
+                    color = Color(0xFF8C6A3F).copy(alpha = 0.9f),
+                    topLeft = Offset(c.x - halfW, c.y - halfH),
+                    size = Size(halfW * 2, halfH * 2),
+                    cornerRadius = CornerRadius(26f),
+                    style = Stroke(width = 6f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 16f), phase)),
+                )
+                // padlock
+                drawArc(
+                    Color(0xFFDDE4EE), startAngle = 180f, sweepAngle = 180f, useCenter = false,
+                    topLeft = Offset(c.x - 20f, c.y - 48f), size = Size(40f, 42f), style = Stroke(10f),
+                )
+                drawRoundRect(Color(0xFF2B2B33), topLeft = Offset(c.x - 27f, c.y - 22f), size = Size(54f, 44f), cornerRadius = CornerRadius(11f))
+                drawRoundRect(
+                    Brush.verticalGradient(listOf(Color(0xFFB9C6DA), Color(0xFF5B6B82)), startY = c.y - 20f, endY = c.y + 20f),
+                    topLeft = Offset(c.x - 23f, c.y - 19f), size = Size(46f, 38f), cornerRadius = CornerRadius(9f),
+                )
+                drawCircle(Color(0xFF2B2B33), radius = 6f, center = Offset(c.x, c.y - 2f))
+                drawRect(Color(0xFF2B2B33), topLeft = Offset(c.x - 3f, c.y - 2f), size = Size(6f, 12f))
+                // green plus badge (tap to unlock)
+                val bx = c.x + halfW - 6f
+                val by = c.y - halfH + 4f
+                drawCircle(Color(0xFF2B2B33), radius = 26f, center = Offset(bx, by))
+                drawCircle(Color(0xFF3DDC5F), radius = 22f, center = Offset(bx, by))
+                drawRect(Color.White, topLeft = Offset(bx - 12f, by - 4f), size = Size(24f, 8f))
+                drawRect(Color.White, topLeft = Offset(bx - 4f, by - 12f), size = Size(8f, 24f))
+            } else if (!occupied.contains(i)) {
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.10f),
                     topLeft = Offset(c.x - halfW, c.y - halfH),
@@ -465,13 +500,29 @@ object Painters {
             }
 
             Deco.METRO -> {
-                // train silhouette across the top
+                // train silhouette across the top — orange stripe + door seams (reference-look)
                 drawRoundRect(Color(0xFFC4CEDD), topLeft = Offset(-40f, 190f), size = Size(Dim.VW + 80f, 118f), cornerRadius = CornerRadius(26f))
                 drawRoundRect(Color(0xFF8E9DB5), topLeft = Offset(-40f, 276f), size = Size(Dim.VW + 80f, 32f), cornerRadius = CornerRadius(12f))
                 var x = 40f
                 while (x < Dim.VW - 60f) {
                     drawRoundRect(Color(0xFF44516A), topLeft = Offset(x, 212f), size = Size(120f, 52f), cornerRadius = CornerRadius(10f))
                     x += 190f
+                }
+                // signature orange cab stripe
+                drawRect(Color(0xFFE8623D), topLeft = Offset(-40f, 252f), size = Size(Dim.VW + 80f, 13f))
+                drawRect(Color(0xFFFFB08A), topLeft = Offset(-40f, 250f), size = Size(Dim.VW + 80f, 3f))
+                // door seams
+                var dx = 235f
+                while (dx < Dim.VW - 60f) {
+                    drawRoundRect(Color(0xFF8E9DB5).copy(alpha = 0.7f), topLeft = Offset(dx, 200f), size = Size(9f, 100f), cornerRadius = CornerRadius(4f))
+                    dx += 380f
+                }
+                // platform railing behind the queue band
+                drawRect(Color(0xFF39445A), topLeft = Offset(0f, 560f), size = Size(Dim.VW, 9f))
+                var rx = 36f
+                while (rx < Dim.VW) {
+                    drawRect(Color(0xFF39445A), topLeft = Offset(rx, 560f), size = Size(7f, 42f))
+                    rx += 92f
                 }
                 // lamp post left
                 drawRoundRect(Color(0xFF39445A), topLeft = Offset(60f, 330f), size = Size(12f, 250f), cornerRadius = CornerRadius(5f))

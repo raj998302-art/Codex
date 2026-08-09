@@ -98,6 +98,8 @@ class SoundManager(private val prefs: Prefs) {
 
     fun chainBreak() = play(ToneGenerator.TONE_PROP_BEEP, 90)
 
+    fun unlock() = play(ToneGenerator.TONE_PROP_BEEP2, 110)
+
     fun blocked() = play(ToneGenerator.TONE_SUP_CONGESTION, 110)
 
     fun whoosh() = play(ToneGenerator.TONE_CDMA_PIP, 90)

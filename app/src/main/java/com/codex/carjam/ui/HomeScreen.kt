@@ -520,6 +520,7 @@ private fun FeaturePedestal(
         Box(Modifier.size(58.dp)) {
             Canvas(Modifier.fillMaxSize()) {
                 val u = size.minDimension / 58f
+                val cx = size.width / 2f
                 // stepped stone pedestal
                 drawRoundRect(
                     PedestalBase,
@@ -615,8 +616,6 @@ private fun FeaturePedestal(
 }
 
 // Pedestal toy painters (DrawScope in a ~24x24 box, gold-tinted when locked)
-
-private fun DrawScope.withGold(body: DrawScope.() -> Unit) = body()
 
 private fun DrawScope.pedestalVs(locked: Boolean) {
     val disc = if (locked) Color(0xFFE8B23C) else Color(0xFFBF6CF2)

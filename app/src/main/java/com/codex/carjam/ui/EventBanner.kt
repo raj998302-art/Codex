@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.codex.carjam.game.EventId
 import com.codex.carjam.game.GameEvent
 import com.codex.carjam.game.render.GameIconKind
+import com.codex.carjam.game.render.Icons
 import kotlin.math.cos
 import kotlin.math.sin
 

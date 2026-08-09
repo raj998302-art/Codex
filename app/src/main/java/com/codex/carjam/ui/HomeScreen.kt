@@ -95,7 +95,11 @@ fun HomeScreen(
     var showQuests by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(!prefs.welcomed.value) }
     var seasonPrize by remember { mutableStateOf<SeasonPrize?>(null) }
-    val theme = LevelTheme.entries[(prefs.maxLevel.intValue - 1) % LevelTheme.entries.size]
+    val theme = run {
+        // mirror the generator: only themes already unlocked at this level
+        val pool = LevelTheme.entries.filter { prefs.maxLevel.intValue >= it.minLevel }
+        pool[((prefs.maxLevel.intValue - 1) % pool.size).coerceAtLeast(0)]
+    }
     val event = remember { Events.today() }
     val dailyReady = DailyRewards.canClaim(prefs)
     val activity = LocalActivity()

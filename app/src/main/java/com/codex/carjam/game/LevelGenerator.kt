@@ -45,10 +45,12 @@ object LevelGenerator {
     private val placeB get() = Dim.ARENA_BOTTOM - Dim.ARENA_PAD
 
     fun generate(level: Int, mysteryBoost: Int = 0): LevelSpec {
-        val themes = LevelTheme.entries
-        val styles = LayoutStyle.entries
-        val theme = themes[(level - 1) % themes.size]
-        val style = styles[(level - 1) % styles.size]
+        // Maps + layouts keep unlocking as you climb: new themes join the
+        // rotation at their minLevel, so the game keeps feeling fresh.
+        val themePool = LevelTheme.entries.filter { level >= it.minLevel }
+        val stylePool = LayoutStyle.entries.filter { level >= it.minLevel }
+        val theme = themePool[(level - 1) % themePool.size]
+        val style = stylePool[(level - 1) % stylePool.size]
         val slotCount = when {
             level <= 2 -> 4
             level <= 6 -> 5
@@ -87,9 +89,11 @@ object LevelGenerator {
                 repeat(car.type.seats) { queue.add(c) }
             }
 
-            // Mystery ("?") cars on later levels – but never among the first escapees.
+            // Mystery ("?") cars on later levels – but never among the first
+            // escapees. NIGHT levels hide one extra under the neon.
             if (level >= 4 || mysteryBoost > 0) {
-                val mysteryCount = min(1 + level / 3 + mysteryBoost, min(order.size / 4, 16))
+                val nightBoost = if (theme == LevelTheme.NIGHT) 1 else 0
+                val mysteryCount = min(1 + level / 3 + mysteryBoost + nightBoost, min(order.size / 4, 16))
                 val pool = order.subList((order.size * 0.25f).toInt(), order.size).toMutableList()
                 repeat(mysteryCount) {
                     if (pool.isEmpty()) return@repeat
@@ -100,15 +104,18 @@ object LevelGenerator {
 
             // Frozen cars from level 9+: ice-locked blockers that need 1-2 taps to
             // crack before they can move. Never on the opening escapees, never on
-            // mystery cars (two gimmicks on one car reads badly).
+            // mystery cars (two gimmicks on one car reads badly). FROZEN nights are
+            // extra icy; higher levels pack thicker ice overall.
             if (level >= 9) {
-                val chance = (0.06f + level * 0.004f).coerceAtMost(0.22f)
+                val themeMul = if (theme == LevelTheme.FROZEN) 1.6f else 1f
+                val chance = (0.06f + level * 0.005f).coerceAtMost(0.30f) * themeMul
+                val doubleChance = if (level >= 40) 0.55f else 0.4f
                 for (slot in (order.size * 0.15f).toInt() until order.size) {
                     val idx = order[slot]
                     val p = placed[idx]
                     if (p.mystery) continue
                     if (rng.nextFloat() < chance) {
-                        p.frozen = if (level >= 25 && rng.nextFloat() < 0.4f) 2 else 1
+                        p.frozen = if (level >= 25 && rng.nextFloat() < doubleChance) 2 else 1
                     }
                 }
             }
@@ -120,8 +127,10 @@ object LevelGenerator {
             if (level >= 11) {
                 val usedPos = mutableSetOf<Int>()
                 val keyPos = mutableSetOf<Int>()
-                var want = if (rng.nextFloat() < min(0.14f + level * 0.006f, 0.5f)) 1 else 0
-                if (want > 0 && level >= 28 && rng.nextFloat() < 0.35f) want++
+                // molten chains are everywhere near the volcano
+                val themeMul = if (theme == LevelTheme.LAVA) 1.45f else 1f
+                var want = if (rng.nextFloat() < min(0.14f + level * 0.006f, 0.5f) * themeMul) 1 else 0
+                if (want > 0 && level >= 28 && rng.nextFloat() < (if (level >= 40) 0.5f else 0.35f)) want++
                 val minPos = max(4, (order.size * 0.35f).toInt())
                 var guard = 0
                 while (want > 0 && guard++ < 40) {

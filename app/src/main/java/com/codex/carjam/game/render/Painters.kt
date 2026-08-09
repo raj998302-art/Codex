@@ -507,10 +507,284 @@ object Painters {
                     x += 50f
                 }
             }
+
+            Deco.WINTER -> {
+                // snow mounds along the skyline
+                drawOval(Color(0xFFF8FCFF), topLeft = Offset(-90f, 470f), size = Size(420f, 170f))
+                drawOval(Color(0xFFF0F8FF), topLeft = Offset(700f, 500f), size = Size(460f, 140f))
+                // pines with snowy caps + a snowman
+                pineTree(120f, 330f, 95f)
+                pineTree(950f, 300f, 115f)
+                pineTree(1015f, 390f, 70f)
+                snowman(310f, 520f)
+                // falling snow
+                for (i in 0 until 26) {
+                    val fx = (i * 91f) % Dim.VW
+                    val speed = 0.05f + (i % 3) * 0.022f
+                    val fy = ((i * 137f + ms * speed) % 620f) - 10f
+                    drawCircle(Color.White.copy(alpha = 0.45f + (i % 3) * 0.2f), radius = 3f + (i % 4) * 1.2f, center = Offset(fx, fy))
+                }
+            }
+
+            Deco.BEACH -> {
+                // spinning sun
+                val sun = Offset(150f, 130f)
+                withTransform({ rotate(ms * 0.012f, sun) }) {
+                    for (i in 0 until 10) {
+                        val a = i * Math.PI / 5
+                        drawLine(
+                            Color(0xFFFFE071).copy(alpha = 0.7f),
+                            start = Offset(sun.x + cos(a).toFloat() * 62f, sun.y + sin(a).toFloat() * 62f),
+                            end = Offset(sun.x + cos(a).toFloat() * 92f, sun.y + sin(a).toFloat() * 92f),
+                            strokeWidth = 14f,
+                        )
+                    }
+                }
+                drawCircle(Color(0xFFFFD32E), radius = 52f, center = sun)
+                drawCircle(Color(0xFFFFE071), radius = 38f, center = sun)
+                palmTree(940f, 470f)
+                umbrella(230f, 470f)
+                // beach ball
+                drawCircle(Color(0xFFFFFFFF), radius = 30f, center = Offset(500f, 560f))
+                drawArc(Color(0xFFFF4757), 200f, 120f, useCenter = true, topLeft = Offset(470f, 530f), size = Size(60f, 60f))
+                drawArc(Color(0xFF3B9BFF), 320f, 120f, useCenter = true, topLeft = Offset(470f, 530f), size = Size(60f, 60f))
+                drawCircle(Color(0xFF2B2B33).copy(alpha = 0.2f), radius = 30f, center = Offset(500f, 560f), style = Stroke(5f))
+            }
+
+            Deco.FROZEN -> {
+                // aurora ribbons shimmering across the arctic sky
+                val auroraCols = listOf(Color(0xFF7CF7C4), Color(0xFF7FC8FF), Color(0xFFC39BFF))
+                for (band in 0 until 3) {
+                    val pth = Path()
+                    var x = -30f
+                    pth.moveTo(x, 150f)
+                    while (x < Dim.VW + 30f) {
+                        val y = 130f + band * 46f + sin(x * 0.011f + ms * 0.0012f + band * 2.1f) * 34f
+                        pth.lineTo(x, y)
+                        x += 58f
+                    }
+                    drawPath(pth, auroraCols[band].copy(alpha = 0.20f), style = Stroke(width = 30f))
+                }
+                // giant ice crystals + melt puddles
+                iceCrystal(90f, 380f, 66f)
+                iceCrystal(980f, 330f, 84f)
+                iceCrystal(880f, 470f, 50f)
+                drawOval(Color(0x33FFFFFF), topLeft = Offset(300f, 560f), size = Size(230f, 60f))
+                drawOval(Color(0x334A78A0), topLeft = Offset(310f, 566f), size = Size(210f, 48f))
+                // light drifting snow
+                for (i in 0 until 16) {
+                    val fx = (i * 131f) % Dim.VW
+                    val fy = ((i * 167f + ms * 0.035f) % 600f) - 10f
+                    drawCircle(Color.White.copy(alpha = 0.5f), radius = 2.5f + (i % 3), center = Offset(fx, fy))
+                }
+            }
+
+            Deco.LAVA -> {
+                // volcano with a glowing crater
+                volcano(170f, 500f, 300f)
+                // lava pool shimmering at the sky base
+                drawRoundRect(Color(0xFF7E2210), topLeft = Offset(480f, 560f), size = Size(560f, 70f), cornerRadius = CornerRadius(24f))
+                drawRoundRect(Color(0xFFFF7B2E), topLeft = Offset(495f, 572f), size = Size(530f, 46f), cornerRadius = CornerRadius(18f))
+                drawRoundRect(Color(0xFFFFC93C).copy(alpha = 0.85f), topLeft = Offset(520f, 584f), size = Size(200f, 20f), cornerRadius = CornerRadius(10f))
+                // drifting smoke
+                for (i in 0 until 4) {
+                    val sx = 150f + i * 70f + sin(ms * 0.0009f + i * 2.3f) * 26f
+                    val sy = 330f - i * 34f
+                    drawCircle(Color(0xFF9E8B90).copy(alpha = 0.30f - i * 0.05f), radius = 30f + i * 9f, center = Offset(sx, sy))
+                }
+                // rising embers
+                for (i in 0 until 18) {
+                    val ex = (i * 149f) % Dim.VW + sin(ms * 0.0013f + i * 1.7f) * 24f
+                    val ey = 620f - ((i * 173f + ms * (0.05f + (i % 4) * 0.018f)) % 610f)
+                    val fade = (ey / 620f).coerceIn(0.15f, 1f)
+                    drawCircle(if (i % 2 == 0) Color(0xFFFFC93C) else Color(0xFFFF7B2E), radius = 3.5f + (i % 3) * 1.5f, center = Offset(ex, ey), alpha = fade)
+                }
+            }
+
+            Deco.JUNGLE -> {
+                // canopy leaves hanging in from the top
+                leaf(120f, 60f, 220f, -28f, Color(0xFF2F7C2E), Color(0xFF3F9E3C))
+                leaf(560f, 20f, 250f, 12f, Color(0xFF2A7030), Color(0xFF38923A))
+                leaf(980f, 70f, 220f, 24f, Color(0xFF2F7C2E), Color(0xFF4AAE46))
+                // a vine with side leaves
+                drawLine(Color(0xFF2A5C1E), Offset(870f, 0f), Offset(870f, 260f), strokeWidth = 10f)
+                leaf(845f, 150f, 95f, -40f, Color(0xFF2F7C2E), Color(0xFF3F9E3C))
+                leaf(905f, 210f, 85f, 35f, Color(0xFF2A7030), Color(0xFF45A843))
+                // wildflowers
+                flower(90f, 540f, Color(0xFFFF7AD9))
+                flower(190f, 585f, Color(0xFFFFD32E))
+                flower(770f, 560f, Color(0xFFFF7AD9))
+                // drifting fireflies
+                for (i in 0 until 12) {
+                    val fx = (i * 223f) % Dim.VW + sin(ms * 0.0011f + i * 2.9f) * 46f
+                    val fy = 260f + (i * 71f) % 320 + cos(ms * 0.0014f + i * 1.3f) * 30f
+                    val tw = 0.35f + 0.45f * (0.5f + 0.5f * sin(ms * 0.006f + i * 2.1f))
+                    drawCircle(Color(0xFFFFF3A6), radius = 4f, center = Offset(fx, fy), alpha = tw)
+                }
+            }
+
+            Deco.NIGHT -> {
+                // twinkling stars + moon
+                for (i in 0 until 30) {
+                    val sx = (i * 197f) % Dim.VW
+                    val sy = (i * 83f) % 300f + 20f
+                    val tw = 0.3f + 0.55f * (0.5f + 0.5f * sin(ms * 0.004f + i * 1.9f))
+                    drawCircle(Color(0xFFFFFBEA), radius = 2.2f + (i % 3) * 1.1f, center = Offset(sx, sy), alpha = tw)
+                }
+                drawCircle(Color(0xFFFFF4D6), radius = 54f, center = Offset(900f, 130f))
+                drawCircle(Color(0xFFE9DFC0), radius = 11f, center = Offset(880f, 115f))
+                drawCircle(Color(0xFFE9DFC0), radius = 7f, center = Offset(915f, 145f))
+                // neon skyline with lit windows
+                val buildingCols = listOf(Color(0xFF1C2244), Color(0xFF232B52), Color(0xFF1A2040), Color(0xFF262E58))
+                var bx = -20f
+                var bi = 0
+                while (bx < Dim.VW) {
+                    val bw = 150f + (bi % 3) * 50f
+                    val bh = 190f + (bi % 4) * 55f
+                    drawRoundRect(buildingCols[bi % 4], topLeft = Offset(bx, 630f - bh), size = Size(bw, bh), cornerRadius = CornerRadius(10f))
+                    var wy = 630f - bh + 22f
+                    var wi = 0
+                    while (wy < 630f - 30f) {
+                        var wx = bx + 18f
+                        var wj = 0
+                        while (wx < bx + bw - 22f) {
+                            if ((wi + wj + bi) % 3 != 0) {
+                                drawRect(Color(0xFFFFD93D).copy(alpha = 0.85f), topLeft = Offset(wx, wy), size = Size(14f, 16f))
+                            }
+                            wx += 32f
+                            wj++
+                        }
+                        wy += 34f
+                        wi++
+                    }
+                    // neon roof edge
+                    drawRect(if (bi % 2 == 0) Color(0xFFFF5AD2) else Color(0xFF5AF2FF), topLeft = Offset(bx, 630f - bh), size = Size(bw, 6f))
+                    bx += bw + 26f
+                    bi++
+                }
+            }
         }
     }
 
     // ------------------------------------------------------------------ small deco helpers
+
+    private fun DrawScope.pineTree(x: Float, y: Float, s: Float) {
+        drawRect(Color(0xFF7E5A38), topLeft = Offset(x - s * 0.06f, y + s * 0.55f), size = Size(s * 0.12f, s * 0.32f))
+        val greens = listOf(Color(0xFF2F7C4E), Color(0xFF37925C), Color(0xFF41A86C))
+        for (i in 0 until 3) {
+            val w = s * (1f - i * 0.24f)
+            val ty = y + i * s * 0.26f
+            val tri = Path().apply {
+                moveTo(x - w / 2f, ty + s * 0.34f)
+                lineTo(x + w / 2f, ty + s * 0.34f)
+                lineTo(x, ty - s * 0.06f)
+                close()
+            }
+            drawPath(tri, greens[i])
+            val cap = Path().apply {
+                moveTo(x - w * 0.18f, ty + s * 0.05f)
+                lineTo(x + w * 0.18f, ty + s * 0.05f)
+                lineTo(x, ty - s * 0.06f)
+                close()
+            }
+            drawPath(cap, Color(0xFFF4FAFF))
+        }
+    }
+
+    private fun DrawScope.snowman(x: Float, y: Float) {
+        drawCircle(Color(0xFFF8FCFF), radius = 34f, center = Offset(x, y))
+        drawCircle(Color(0xFFF8FCFF), radius = 24f, center = Offset(x, y - 46f))
+        drawRect(Color(0xFF2B2B33), topLeft = Offset(x - 17f, y - 88f), size = Size(34f, 10f))
+        drawRect(Color(0xFF2B2B33), topLeft = Offset(x - 11f, y - 110f), size = Size(22f, 24f))
+        drawCircle(Color(0xFF2B2B33), radius = 3f, center = Offset(x - 8f, y - 52f))
+        drawCircle(Color(0xFF2B2B33), radius = 3f, center = Offset(x + 8f, y - 52f))
+        drawRect(Color(0xFFFF4757), topLeft = Offset(x - 20f, y - 34f), size = Size(40f, 9f))
+        drawRect(Color(0xFFFF4757), topLeft = Offset(x + 8f, y - 28f), size = Size(9f, 22f))
+    }
+
+    private fun DrawScope.palmTree(x: Float, y: Float) {
+        for (i in 0 until 4) {
+            drawRoundRect(
+                Color(0xFF9C6A38),
+                topLeft = Offset(x + i * 12f - 10f, y - i * 46f - 42f),
+                size = Size(24f, 52f),
+                cornerRadius = CornerRadius(10f),
+            )
+        }
+        val top = Offset(x + 44f, y - 195f)
+        for (i in 0 until 5) {
+            val a = -25f + i * 42f
+            withTransform({ rotate(a, top) }) {
+                drawOval(Color(0xFF3F9E3C), topLeft = Offset(top.x, top.y - 9f), size = Size(120f, 30f))
+                drawOval(Color(0xFF4AAE46), topLeft = Offset(top.x + 8f, top.y - 4f), size = Size(104f, 18f))
+            }
+        }
+        drawCircle(Color(0xFF7B5A2B), radius = 12f, center = Offset(top.x + 6f, top.y + 12f))
+        drawCircle(Color(0xFF7B5A2B), radius = 10f, center = Offset(top.x + 26f, top.y + 8f))
+    }
+
+    private fun DrawScope.umbrella(x: Float, y: Float) {
+        drawLine(Color(0xFF8A5A2B), Offset(x, y - 110f), Offset(x, y + 40f), strokeWidth = 10f)
+        val cols = listOf(Color(0xFFFF4757), Color(0xFFFFF6E3), Color(0xFF3B9BFF), Color(0xFFFFF6E3))
+        for (i in 0 until 4) {
+            val p = Path().apply {
+                moveTo(x + (i - 2) * 55f, y - 100f)
+                lineTo(x + (i - 1) * 55f, y - 100f)
+                lineTo(x, y - 165f)
+                close()
+            }
+            drawPath(p, cols[i])
+        }
+    }
+
+    private fun DrawScope.iceCrystal(x: Float, y: Float, s: Float) {
+        val body = Path().apply {
+            moveTo(x, y - s)
+            lineTo(x + s * 0.55f, y)
+            lineTo(x, y + s)
+            lineTo(x - s * 0.55f, y)
+            close()
+        }
+        drawPath(body, Color(0xFFBFE8FF).copy(alpha = 0.85f))
+        drawLine(Color.White.copy(alpha = 0.8f), Offset(x, y - s * 0.7f), Offset(x + s * 0.35f, y), strokeWidth = 5f)
+        drawLine(Color.White.copy(alpha = 0.5f), Offset(x, y - s * 0.7f), Offset(x - s * 0.35f, y), strokeWidth = 3f)
+    }
+
+    private fun DrawScope.volcano(x: Float, y: Float, w: Float) {
+        val cone = Path().apply {
+            moveTo(x - w / 2f, y)
+            lineTo(x - w * 0.14f, y - w * 0.5f)
+            lineTo(x + w * 0.14f, y - w * 0.5f)
+            lineTo(x + w / 2f, y)
+            close()
+        }
+        drawPath(cone, Color(0xFF5A3236))
+        drawOval(Color(0xFFFF7B2E), topLeft = Offset(x - w * 0.16f, y - w * 0.53f), size = Size(w * 0.32f, w * 0.09f))
+        drawOval(Color(0xFFFFC93C), topLeft = Offset(x - w * 0.09f, y - w * 0.51f), size = Size(w * 0.18f, w * 0.05f))
+        val drip = Path().apply {
+            moveTo(x - w * 0.10f, y - w * 0.44f)
+            lineTo(x + w * 0.02f, y - w * 0.44f)
+            lineTo(x - w * 0.02f, y - w * 0.16f)
+            close()
+        }
+        drawPath(drip, Color(0xFFE8623D))
+    }
+
+    private fun DrawScope.leaf(cx: Float, cy: Float, len: Float, deg: Float, dark: Color, light: Color) {
+        withTransform({ rotate(deg, Offset(cx, cy)) }) {
+            drawOval(dark, topLeft = Offset(cx - len / 2f, cy - len * 0.17f), size = Size(len, len * 0.34f))
+            drawOval(light, topLeft = Offset(cx - len / 2f + 14f, cy - len * 0.17f + 7f), size = Size(len - 28f, len * 0.34f - 14f))
+            drawLine(light.copy(alpha = 0.7f), Offset(cx - len / 2f + 12f, cy), Offset(cx + len / 2f - 12f, cy), strokeWidth = 5f)
+        }
+    }
+
+    private fun DrawScope.flower(x: Float, y: Float, petal: Color) {
+        for (i in 0 until 5) {
+            val a = i * Math.PI * 2 / 5
+            drawCircle(petal, radius = 13f, center = Offset(x + cos(a).toFloat() * 16f, y + sin(a).toFloat() * 16f))
+        }
+        drawCircle(Color(0xFFFFD32E), radius = 10f, center = Offset(x, y))
+    }
 
     private fun DrawScope.coralCone(x: Float, y: Float, color: Color) {
         val path = Path().apply {

@@ -193,6 +193,15 @@ player's own saved stats (still zero demo bots).
 | **Booster shop** | BOOSTER BELT dialog (tap an empty booster or the shop): coin-priced ×1/×3 top-ups; counts clamped server-side (economy clamp) and synced with cloud save |
 | **New sounds** | Hammer smash, queue mix, chain rattle and chain break tones; hammer armed state has a pulsing hint chip |
 
+## v2.8 (theme maps + difficulty ramp)
+
+| System | What changed |
+| --- | --- |
+| **6 new theme maps** | Total 11 boards: WINTER (falling snow, snow-capped pines, snowman), SUMMER BEACH (spinning sun, palm, umbrella, beach ball), FROZEN (aurora ribbons, huge ice crystals, drifting snow), LAVA (smoking volcano, lava pool, rising embers), JUNGLE (canopy leaves, vines, wildflowers, fireflies), NEON NIGHT (twinkling stars, moon, lit-window skyline) |
+| **Maps unlock as you climb** | Themes join the rotation progressively — Beach L6, Winter L9, Jungle L13, Frozen L16, Lava L21, Neon Night L26; board layouts too (Diagonal L3, Spiral L5, Disc L8, Heart L13). Home screen backdrop mirrors the same unlock pool |
+| **Theme-linked difficulty** | FROZEN boards pack 1.6x frozen cars ("ice bhare" levels), LAVA boards 1.45x chain-locks, NEON NIGHT hides an extra mystery car |
+| **Difficulty ramps harder** | Frozen chance cap raised (0.22 → 0.30, steeper slope), double-tap ice 40% at L25+ and 55% at L40+, second chain-lock gets likelier past L40 — every ramp tweak stays inside the generator's provably-solvable rules |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

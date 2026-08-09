@@ -73,9 +73,9 @@ enum class CarType(val seats: Int, val len: Float, val wid: Float) {
     BUS(seats = 6, len = 214f, wid = 90f),
 }
 
-enum class LayoutStyle { GRID, DIAGONAL, SPIRAL, DISC, HEART }
+enum class LayoutStyle(val minLevel: Int) { GRID(1), DIAGONAL(3), SPIRAL(5), DISC(8), HEART(13) }
 
-enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT }
+enum class Deco { SEA, ZOO, FUNFAIR, METRO, DESERT, WINTER, BEACH, FROZEN, LAVA, JUNGLE, NIGHT }
 
 /** Full colour script for a level, mirroring the themed boards in the screenshots. */
 enum class LevelTheme(
@@ -89,6 +89,8 @@ enum class LevelTheme(
     val signBoard: Color,
     val signPost: Color,
     val deco: Deco,
+    /** Themes keep unlocking as the player climbs — new map, new mood. */
+    val minLevel: Int = 1,
 ) {
     SEA(
         skyTop = Color(0xFF7FD8E6), skyBottom = Color(0xFF3FA6C8),
@@ -129,6 +131,54 @@ enum class LevelTheme(
         arenaBg = Color(0xFFFCF1D2), arenaEdge = Color(0xFFE0BB7E),
         signBoard = Color(0xFF9C6230), signPost = Color(0xFF73451F),
         deco = Deco.DESERT,
+    ),
+    WINTER(
+        skyTop = Color(0xFFDCEFFA), skyBottom = Color(0xFFB3D4EE),
+        slotBandTop = Color(0xFF7FA8CC), slotBandBottom = Color(0xFF6C93B8),
+        road = Color(0xFF93A9BE),
+        arenaBg = Color(0xFFF4FAFF), arenaEdge = Color(0xFFC2DDF2),
+        signBoard = Color(0xFF3E74B5), signPost = Color(0xFF2C578C),
+        deco = Deco.WINTER, minLevel = 9,
+    ),
+    BEACH(
+        skyTop = Color(0xFFBFF0F5), skyBottom = Color(0xFF6FCBDD),
+        slotBandTop = Color(0xFFE8A25D), slotBandBottom = Color(0xFFD68C44),
+        road = Color(0xFFC9B18C),
+        arenaBg = Color(0xFFFBEBB6), arenaEdge = Color(0xFFE5C988),
+        signBoard = Color(0xFF9C6230), signPost = Color(0xFF73451F),
+        deco = Deco.BEACH, minLevel = 6,
+    ),
+    FROZEN(
+        skyTop = Color(0xFF9FD1F2), skyBottom = Color(0xFF5FA4DE),
+        slotBandTop = Color(0xFF2E6EA8), slotBandBottom = Color(0xFF235A8E),
+        road = Color(0xFF7E9DB8),
+        arenaBg = Color(0xFFDCEFFB), arenaEdge = Color(0xFF9FCCF0),
+        signBoard = Color(0xFF1C4E80), signPost = Color(0xFF14385E),
+        deco = Deco.FROZEN, minLevel = 16,
+    ),
+    LAVA(
+        skyTop = Color(0xFF3A1E24), skyBottom = Color(0xFF6E2A22),
+        slotBandTop = Color(0xFF4A2C30), slotBandBottom = Color(0xFF3C2226),
+        road = Color(0xFF4A3A40),
+        arenaBg = Color(0xFF453239), arenaEdge = Color(0xFFE86A2E),
+        signBoard = Color(0xFFE8623D), signPost = Color(0xFF8C3A20),
+        deco = Deco.LAVA, minLevel = 21,
+    ),
+    JUNGLE(
+        skyTop = Color(0xFFB8E08A), skyBottom = Color(0xFF5FA84C),
+        slotBandTop = Color(0xFF3E7C34), slotBandBottom = Color(0xFF2F6528),
+        road = Color(0xFF7E8A70),
+        arenaBg = Color(0xFFDCF0BE), arenaEdge = Color(0xFFA8CC7E),
+        signBoard = Color(0xFF6E4A1F), signPost = Color(0xFF523616),
+        deco = Deco.JUNGLE, minLevel = 13,
+    ),
+    NIGHT(
+        skyTop = Color(0xFF131B3A), skyBottom = Color(0xFF2C2560),
+        slotBandTop = Color(0xFF3A2E6E), slotBandBottom = Color(0xFF2C2358),
+        road = Color(0xFF2A2F45),
+        arenaBg = Color(0xFF3A4270), arenaEdge = Color(0xFF8A5AE0),
+        signBoard = Color(0xFF7E3FC8), signPost = Color(0xFF5B2A94),
+        deco = Deco.NIGHT, minLevel = 26,
     ),
 }
 

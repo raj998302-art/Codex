@@ -37,6 +37,8 @@ class Prefs(context: Context) {
         private set
     var soundOn = mutableStateOf(sp.getBoolean(KEY_SOUND, true))
     var vibrateOn = mutableStateOf(sp.getBoolean(KEY_VIBRATE, true))
+    var musicOn = mutableStateOf(sp.getBoolean(KEY_MUSIC, true))
+        private set
     var dailyStreak = mutableIntStateOf(sp.getInt(KEY_STREAK, 0))
         private set
     var lastClaimDay = mutableLongStateOf(sp.getLong(KEY_LAST_CLAIM, -1L))
@@ -259,6 +261,32 @@ class Prefs(context: Context) {
             markReferred(cRef)
             raised = true
         }
+        // garage: unlocks union-merge (never lose a purchase), pick follows cloud
+        val cRides = s.optString("rides", "")
+            .split(',')
+            .map { it.trim() }
+            .filter { it.matches(Regex("[a-z]{2,20}")) }
+            .toSet()
+        if (cRides.isNotEmpty()) {
+            val merged = ownedRides.value + cRides
+            if (merged != ownedRides.value) {
+                ownedRides.value = merged
+                sp.edit().putStringSet(KEY_RIDES, merged).apply()
+                raised = true
+            }
+            val cSel = s.optString("rideSel", "")
+            if (cSel.isNotEmpty() && merged.contains(cSel) && cSel != selectedRide.value) {
+                selectRide(cSel)
+                raised = true
+            }
+        }
+        if (s.has("musicOn")) {
+            val cMusic = s.optBoolean("musicOn", musicOn.value)
+            if (cMusic != musicOn.value) {
+                setMusic(cMusic)
+                raised = true
+            }
+        }
         return raised
     }
 
@@ -337,6 +365,34 @@ class Prefs(context: Context) {
     fun setVibrate(on: Boolean) {
         vibrateOn.value = on
         sp.edit().putBoolean(KEY_VIBRATE, on).apply()
+    }
+
+    fun setMusic(on: Boolean) {
+        musicOn.value = on
+        sp.edit().putBoolean(KEY_MUSIC, on).apply()
+    }
+
+    // ---------------------------------------------------------------- garage
+
+    var ownedRides = mutableStateOf<Set<String>>(
+        (sp.getStringSet(KEY_RIDES, emptySet())?.toSet() ?: emptySet()) + "sedan",
+    )
+        private set
+
+    fun unlockRide(id: String) {
+        if (ownedRides.value.contains(id)) return
+        val v = ownedRides.value + id
+        ownedRides.value = v
+        sp.edit().putStringSet(KEY_RIDES, v).apply()
+    }
+
+    var selectedRide = mutableStateOf(sp.getString(KEY_RIDE_SEL, "sedan") ?: "sedan")
+        private set
+
+    fun selectRide(id: String) {
+        if (!ownedRides.value.contains(id)) return
+        selectedRide.value = id
+        sp.edit().putString(KEY_RIDE_SEL, id).apply()
     }
 
     fun setRemoveAds(owned: Boolean) {
@@ -438,6 +494,9 @@ class Prefs(context: Context) {
         private const val KEY_MAX_LEVEL = "max_level"
         private const val KEY_SOUND = "sound"
         private const val KEY_VIBRATE = "vibrate"
+        private const val KEY_MUSIC = "music"
+        private const val KEY_RIDES = "owned_rides"
+        private const val KEY_RIDE_SEL = "selected_ride"
         private const val KEY_STREAK = "daily_streak"
         private const val KEY_LAST_CLAIM = "last_claim_day"
         private const val KEY_NAME = "player_name"

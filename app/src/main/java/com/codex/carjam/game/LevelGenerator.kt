@@ -28,6 +28,7 @@ object LevelGenerator {
     ) {
         var color: CarColor = CarColor.RED
         var mystery: Boolean = false
+        var frozen: Int = 0
         val hl: Float get() = type.len / 2f
         val hw: Float get() = type.wid / 2f
         val center: Pt get() = Pt(x, y)
@@ -96,10 +97,26 @@ object LevelGenerator {
                 }
             }
 
+            // Frozen cars from level 9+: ice-locked blockers that need 1-2 taps to
+            // crack before they can move. Never on the opening escapees, never on
+            // mystery cars (two gimmicks on one car reads badly).
+            if (level >= 9) {
+                val chance = (0.06f + level * 0.004f).coerceAtMost(0.22f)
+                for (slot in (order.size * 0.15f).toInt() until order.size) {
+                    val idx = order[slot]
+                    val p = placed[idx]
+                    if (p.mystery) continue
+                    if (rng.nextFloat() < chance) {
+                        p.frozen = if (level >= 25 && rng.nextFloat() < 0.4f) 2 else 1
+                    }
+                }
+            }
+
             val cars = placed.map { p ->
                 CarSpec(
                     id = p.id, x = p.x, y = p.y, angleDeg = p.angle,
                     type = p.type, color = p.color, mystery = p.mystery,
+                    frozen = p.frozen,
                 )
             }
             return LevelSpec(level, theme, style, slotCount, cars, queue)

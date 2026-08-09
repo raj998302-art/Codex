@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.min
 import kotlin.random.Random
 
-enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE }
+enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK }
 
 enum class GameResult { PLAYING, WON, LOST }
 
@@ -30,6 +30,7 @@ class CarEnt(val spec: CarSpec) {
     var angle = spec.angleDeg
     var phase = CarPhase.IN_ARENA
     var revealed = !spec.mystery
+    var frozenLeft = spec.frozen
     var seatsFilled = 0
     var slotIdx = -1
     var wobbleStart = -1f
@@ -208,6 +209,14 @@ class GameEngine(
         }
         val car = hit ?: return
         lastActionMs = ms
+
+        // Ice-locked: every tap cracks the shell first; the car can't move yet.
+        if (car.frozenLeft > 0) {
+            car.frozenLeft--
+            car.wobbleStart = ms
+            onFx(Fx.CRACK)
+            return
+        }
 
         if (!car.revealed || !isClear(car) || freeSlotIndex() == null) {
             car.wobbleStart = ms

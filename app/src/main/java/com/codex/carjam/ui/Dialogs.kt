@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.codex.carjam.R
 import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Prefs
+import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.GameIconKind
 
 @Composable
@@ -100,6 +101,10 @@ fun SettingsDialog(
             DialogTitle("SETTINGS", fill = Color(0xFFFFFFFF), outline = Color(0xFF7A4A12))
             SpacerH(10.dp)
             ToggleRow("Sound FX", prefs.soundOn.value) { prefs.setSound(it) }
+            ToggleRow("Music", prefs.musicOn.value) {
+                prefs.setMusic(it)
+                SoundManager.active?.applyMusicPref()
+            }
             ToggleRow("Vibration", prefs.vibrateOn.value) { prefs.setVibrate(it) }
 
             // ---- cloud save (progress, coins & gems backed up to MongoDB)

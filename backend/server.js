@@ -63,6 +63,9 @@ const saveSchema = new mongoose.Schema(
     practiceWins: { type: Number, default: 0 },
     referredBy: { type: String, default: '' },
     welcomed: { type: Boolean, default: false },
+    musicOn: { type: Boolean, default: true },
+    rides: { type: String, default: 'sedan' },     // comma-joined unlocked ride ids
+    rideSel: { type: String, default: 'sedan' },
   },
   { timestamps: true },
 );
@@ -142,6 +145,9 @@ const canonicalSave = (doc) => ({
   practiceWins: doc.practiceWins,
   referredBy: doc.referredBy,
   welcomed: !!doc.welcomed,
+  musicOn: doc.musicOn !== false,
+  rides: typeof doc.rides === 'string' && doc.rides ? doc.rides : 'sedan',
+  rideSel: typeof doc.rideSel === 'string' && doc.rideSel ? doc.rideSel : 'sedan',
   updatedAt: new Date(doc.updatedAt).getTime(),
 });
 
@@ -243,6 +249,18 @@ app.post('/api/save', async (req, res) => {
       : 1e9;
     const P = (field) => (prev ? prev[field] : null);
 
+    // Garage: union-merge unlocks so a purchase on either phone is never lost;
+    // the selected ride only sticks when it survives the merge.
+    const rideIds = (s) => String(s || '').split(',').filter((x) => /^[a-z]{2,20}$/.test(x));
+    const rides = [...new Set(['sedan', ...rideIds(P('rides')), ...rideIds(body.rides)])].slice(0, 32);
+    const rideSet = new Set(rides);
+    const bodySel = String(body.rideSel ?? '');
+    const rideSel = rideSet.has(bodySel)
+      ? bodySel
+      : (rideSet.has(String(P('rideSel') ?? '')) ? String(P('rideSel')) : 'sedan');
+    // Older clients don't send musicOn — keep whatever we already know.
+    const musicOn = body.musicOn === undefined ? (P('musicOn') ?? true) : !!body.musicOn;
+
     const state = {
       name: cleanName(body.name),
       avatarId: clampInt(body.avatarId, 0, 7),
@@ -257,6 +275,9 @@ app.post('/api/save', async (req, res) => {
       practiceWins: economyClamp(P('practiceWins'), elapsedH, body.practiceWins, 120, 24, 100000),
       referredBy: String(body.referredBy ?? '').slice(0, 24),
       welcomed: !!body.welcomed,
+      musicOn,
+      rides: rides.join(','),
+      rideSel,
     };
 
     const doc = await Save.findOneAndUpdate(

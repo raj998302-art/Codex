@@ -38,9 +38,12 @@ fun CarJamApp() {
     LaunchedEffect(Unit) {
         ads.initialize()
         pgs.initialize()
+        SoundManager.active = sound
+        sound.attach(context)
     }
     DisposableEffect(Unit) {
         onDispose {
+            if (SoundManager.active === sound) SoundManager.active = null
             sound.release()
             billing.release()
         }

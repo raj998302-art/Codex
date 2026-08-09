@@ -55,6 +55,7 @@ object CloudSave {
             status.value = true
             val ahead = localAhead(snap, canonical)
             prefs.applyCloudRestore(canonical)
+            SoundManager.active?.applyMusicPref() // merged musicOn reaches the live player
             prefs.noteCloudSync()
             if (ahead) {
                 LeaderboardApi.pushSave(prefs.syncKey, prefs.deviceId, snapshot(prefs), null)
@@ -77,6 +78,9 @@ object CloudSave {
         .put("practiceWins", prefs.practiceWins.intValue)
         .put("referredBy", prefs.referredBy.value ?: "")
         .put("welcomed", prefs.welcomed.value)
+        .put("musicOn", prefs.musicOn.value)
+        .put("rides", prefs.ownedRides.value.joinToString(","))
+        .put("rideSel", prefs.selectedRide.value)
 
     private val NUM_KEYS = listOf(
         "coins", "gems", "maxLevel", "totalCoinsEarned",

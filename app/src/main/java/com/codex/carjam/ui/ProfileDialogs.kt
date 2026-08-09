@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.Referral
 import com.codex.carjam.game.render.GameIconKind
@@ -131,6 +132,22 @@ fun ProfileDialog(
                     StatCell("PRACTICE", "${prefs.practiceWins.intValue}", Modifier.weight(1f))
                 }
 
+                // ---- garage
+                SpacerH(12.dp)
+                var showGarage by remember { mutableStateOf(false) }
+                SquishyButton(
+                    "MY GARAGE",
+                    onClick = { showGarage = true },
+                    top = Color(0xFFB678E8),
+                    bottom = Color(0xFF8A45C4),
+                    height = 46.dp,
+                    textSize = 16.dp,
+                    icon = { GameIcon(GameIconKind.PARKING, 22.dp) },
+                )
+                if (showGarage) {
+                    GarageDialog(prefs = prefs, onChanged = { CloudSave.sync(prefs, force = true) }, onClose = { showGarage = false })
+                }
+
                 SpacerH(12.dp)
                 // ---- Google Play
                 Column(
@@ -199,7 +216,7 @@ fun ProfileDialog(
                                 type = "text/plain"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
-                                    "🚗 Play CAR JAM SOLVER with me! Use my code ${prefs.myReferralCode} in Profile → Refer & Earn for FREE coins!",
+                                    "Play CAR JAM SOLVER with me! Use my code ${prefs.myReferralCode} in Profile, Refer & Earn, for FREE coins!",
                                 )
                             }
                             activity.startActivity(Intent.createChooser(send, "Share your code"))

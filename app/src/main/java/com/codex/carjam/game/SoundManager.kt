@@ -1,18 +1,66 @@
 package com.codex.carjam.game
 
+import android.content.Context
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.ToneGenerator
+import com.codex.carjam.R
 import kotlin.concurrent.thread
 
 /**
- * Zero-asset sound effects, synthesised with [ToneGenerator] so the APK stays tiny.
- * All calls are safe no-ops when sound is disabled or the device has no tonegen.
+ * Sound effects via [ToneGenerator] + a soft looping background track
+ * (res/raw/bg_music.wav, procedurally composed). Every call is a safe no-op
+ * when audio is unavailable. [active] lets surfaces (settings, activity
+ * lifecycle) reach the live instance without threading one through Compose.
  */
 class SoundManager(private val prefs: Prefs) {
     private var tone: ToneGenerator? = null
 
     @Volatile
     private var failed = false
+
+    private var appContext: Context? = null
+    private var music: MediaPlayer? = null
+
+    companion object {
+        /** The SoundManager currently bound to the UI. */
+        var active: SoundManager? = null
+    }
+
+    /** Bind the application context and honour the saved music preference. */
+    fun attach(context: Context) {
+        appContext = context.applicationContext
+        applyMusicPref()
+    }
+
+    fun applyMusicPref() {
+        if (prefs.musicOn.value) startMusic() else pauseMusic()
+    }
+
+    private fun startMusic() {
+        val ctx = appContext ?: return
+        if (music == null) {
+            music = try {
+                MediaPlayer.create(ctx, R.raw.bg_music)?.apply {
+                    isLooping = true
+                    setVolume(0.32f, 0.32f)
+                }
+            } catch (_: Throwable) {
+                null
+            }
+        }
+        try {
+            music?.takeIf { !it.isPlaying }?.start()
+        } catch (_: Throwable) {
+        }
+    }
+
+    fun pauseMusic() {
+        try {
+            music?.takeIf { it.isPlaying }?.pause()
+        } catch (_: Throwable) {
+        }
+    }
 
     @Synchronized
     private fun ensure(): ToneGenerator? {
@@ -39,6 +87,8 @@ class SoundManager(private val prefs: Prefs) {
     }
 
     fun tap() = play(ToneGenerator.TONE_PROP_ACK, 45)
+
+    fun crack() = play(ToneGenerator.TONE_CDMA_PIP, 35)
 
     fun blocked() = play(ToneGenerator.TONE_SUP_CONGESTION, 110)
 
@@ -84,5 +134,10 @@ class SoundManager(private val prefs: Prefs) {
         } catch (_: Throwable) {
         }
         tone = null
+        try {
+            music?.release()
+        } catch (_: Throwable) {
+        }
+        music = null
     }
 }

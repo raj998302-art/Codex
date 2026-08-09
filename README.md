@@ -172,6 +172,16 @@ player's own saved stats (still zero demo bots).
 | **Daily-reward hardening** | Claims are idempotent — double-taps, re-fires and replays can never double-grant; badge state is fully reactive |
 | **Live counters** | New lifetime passengers-seated counter feeds both missions and achievements (practice excluded) |
 
+## v2.6 (mega content drop)
+
+| System | What changed |
+| --- | --- |
+| **Frozen cars (ice blockers)** | From level 9 some jam cars arrive ice-locked: tap once (twice from level 25) to crack the frost shell before they can drive out. Frost slab, crack webs that spread per tap, wobble + crack FX; never on mystery cars, never on the opening escapees |
+| **New rides in the jam** | Three new painter styles mixed into level traffic: STREET SPORT (racing stripes + spoiler), RESCUE VAN ambulance (lightbar + medical cross) and the SCHOOL BUS (amber beacons, chevron band, STOP badge) |
+| **MY GARAGE** | Car collection on the profile: 8 unlockable rides (coins or gems), live-painted showroom strip, SELECT your star ride; unlocks cloud-sync instantly |
+| **Background music** | A procedurally composed 24s seamless loop (pads, marimba melody, soft percussion, res/raw/bg_music.wav) that plays app-wide, pauses in background, with a Music toggle in SETTINGS |
+| **Sound FX** | New ice-crack tone; music volume kept low (0.32) so taps stay crisp |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

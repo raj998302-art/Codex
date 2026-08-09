@@ -493,6 +493,84 @@ object Painters {
             scale = 1f + 0.30f * exp(-popAge / 140f) * sin(popAge / 36f)
         }
         drawCar(car.x, car.y, angle, car.type, car.color, scale, mystery = !car.revealed, variant = car.spec.id)
+        if (car.frozenLeft > 0) {
+            drawIce(car.x, car.y, angle, car.type, scale, cracked = car.spec.frozen - car.frozenLeft)
+        }
+    }
+
+    /**
+     * Translucent ice shell over a frozen car: frosted glass slab, white rim,
+     * crack web that grows with each tap, and a corner frost sparkle. Drawn
+     * translucent so the car's colour (match cue) still reads through.
+     */
+    private fun DrawScope.drawIce(
+        cx: Float,
+        cy: Float,
+        angleDeg: Float,
+        type: CarType,
+        scale: Float,
+        cracked: Int,
+    ) {
+        val hl = type.len / 2f
+        val hw = type.wid / 2f
+        val rr = hw * 0.55f
+        withTransform({
+            translate(cx, cy)
+            rotate(angleDeg, Offset.Zero)
+            scale(scale, scale, Offset.Zero)
+        }) {
+            // frozen slab with glossy frost gradient
+            drawRoundRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFE3F5FF).copy(alpha = 0.62f),
+                        Color(0xFF9ED9F5).copy(alpha = 0.50f),
+                        Color(0xFF6FBEE8).copy(alpha = 0.58f),
+                    ),
+                    start = Offset(-hw, -hl),
+                    end = Offset(hw, hl),
+                ),
+                topLeft = Offset(-hw - 5f, -hl - 5f),
+                size = Size(hw * 2 + 10f, hl * 2 + 10f),
+                cornerRadius = CornerRadius(rr + 6f),
+            )
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.75f),
+                topLeft = Offset(-hw - 5f, -hl - 5f),
+                size = Size(hw * 2 + 10f, hl * 2 + 10f),
+                cornerRadius = CornerRadius(rr + 6f),
+                style = Stroke(4.5f),
+            )
+            // frost sheen band
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.5f), Color.Transparent),
+                    startY = -hl,
+                    endY = -hl * 0.2f,
+                ),
+                topLeft = Offset(-hw + 6f, -hl),
+                size = Size(hw * 0.6f, hl * 0.8f),
+                cornerRadius = CornerRadius(rr),
+            )
+            // crack webs — denser after each tap
+            val crackCol = Color(0xFFF4FBFF).copy(alpha = 0.85f)
+            val crackCount = 2 + cracked * 2
+            for (i in 0 until crackCount) {
+                val a = (i * 137f) % 360f
+                val rad = Math.toRadians(a.toDouble())
+                val cxn = (cos(rad) * hw * 0.4f).toFloat()
+                val cyn = (sin(rad) * hl * 0.4f).toFloat()
+                val ex = (cos(rad) * hw * 0.95f).toFloat()
+                val ey = (sin(rad) * hl * 0.9f).toFloat()
+                val mx = (cxn + ex) / 2f + (if (i % 2 == 0) 10f else -10f)
+                val my = (cyn + ey) / 2f + (if (i % 2 == 0) -8f else 8f)
+                drawLine(crackCol, Offset(cxn, cyn), Offset(mx, my), strokeWidth = 3f)
+                drawLine(crackCol, Offset(mx, my), Offset(ex, ey), strokeWidth = 2.2f)
+            }
+            // sparkle at the top corner
+            drawCircle(Color.White.copy(alpha = 0.9f), radius = 4f, center = Offset(-hw * 0.62f, -hl * 0.72f))
+            drawCircle(Color.White.copy(alpha = 0.5f), radius = 8f, center = Offset(-hw * 0.62f, -hl * 0.72f))
+        }
     }
 
     /**
@@ -521,7 +599,10 @@ object Painters {
         val glassLight = Color(0xFF5F8CC4)
         val tireCol = Color(0xFF161A21)
         val isTaxi = type == CarType.SEDAN && variant % 6 == 1
+        val isSport = type == CarType.SEDAN && variant % 6 == 2
         val isPolice = type == CarType.SEDAN && variant % 6 == 4
+        val isAmbulance = type == CarType.VAN && variant % 3 == 1
+        val isSchool = type == CarType.BUS && variant % 4 == 1
 
         withTransform({
             translate(cx, cy)
@@ -782,6 +863,35 @@ object Painters {
                         size = Size(hw * 0.76f, 26f),
                         cornerRadius = CornerRadius(10f),
                     )
+                    if (isSchool) {
+                        // twin amber warning beacons on the front roof edge
+                        for (sx in listOf(-1f, 1f)) {
+                            drawCircle(Color(0xFFFFB300).copy(alpha = 0.25f * alpha), 9f, Offset(sx * hw * 0.28f, -hl * 0.90f))
+                            drawCircle(Color(0xFFFFB300).copy(alpha = alpha), 5.5f, Offset(sx * hw * 0.28f, -hl * 0.90f))
+                            drawCircle(Color(0xFFFFF3C4).copy(alpha = 0.85f * alpha), 2.5f, Offset(sx * hw * 0.28f, -hl * 0.90f))
+                        }
+                        // STOP badge on the flank
+                        drawRoundRect(
+                            color = Color(0xFFD63030).copy(alpha = alpha),
+                            topLeft = Offset(-hw - 2f, hl * 0.20f),
+                            size = Size(15f, 15f),
+                            cornerRadius = CornerRadius(3.5f),
+                        )
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.92f * alpha),
+                            topLeft = Offset(-hw + 1.5f, hl * 0.20f + 5.5f),
+                            size = Size(8f, 4f),
+                            cornerRadius = CornerRadius(2f),
+                        )
+                        // black chevron band across the rear
+                        for (i in 0 until 4) {
+                            drawRect(
+                                color = Color(0xFF23262E).copy(alpha = 0.85f * alpha),
+                                topLeft = Offset(-hw * 0.62f + i * (hw * 0.31f), hl * 0.80f),
+                                size = Size(hw * 0.155f, 7f),
+                            )
+                        }
+                    }
                 }
 
                 CarType.VAN -> {
@@ -798,6 +908,48 @@ object Painters {
                             topLeft = Offset(sx * hw * 0.38f - 1.25f, -hl * 0.10f),
                             size = Size(2.5f, hl * 0.46f),
                             cornerRadius = CornerRadius(1.25f),
+                        )
+                    }
+                    if (isAmbulance) {
+                        // white-red emergency lightbar
+                        drawRoundRect(
+                            color = Color(0xFF22262E).copy(alpha = 0.95f * alpha),
+                            topLeft = Offset(-15f, -hl * 0.36f),
+                            size = Size(30f, 10f),
+                            cornerRadius = CornerRadius(5f),
+                        )
+                        drawRoundRect(
+                            color = Color(0xFFF4F6F8).copy(alpha = alpha),
+                            topLeft = Offset(-12.5f, -hl * 0.36f + 1.8f),
+                            size = Size(12f, 6.4f),
+                            cornerRadius = CornerRadius(3f),
+                        )
+                        drawRoundRect(
+                            color = Color(0xFFFF4B3E).copy(alpha = alpha),
+                            topLeft = Offset(0.5f, -hl * 0.36f + 1.8f),
+                            size = Size(12f, 6.4f),
+                            cornerRadius = CornerRadius(3f),
+                        )
+                        drawCircle(Color(0xFFFF6B5E).copy(alpha = 0.3f * alpha), 7.5f, Offset(6.5f, -hl * 0.36f + 5f))
+                        // medical cross under the arrow stem
+                        val cyy = hl * 0.32f
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.92f * alpha),
+                            topLeft = Offset(-7.5f, cyy - 7.5f),
+                            size = Size(15f, 15f),
+                            cornerRadius = CornerRadius(4f),
+                        )
+                        drawRoundRect(
+                            color = Color(0xFFD63030).copy(alpha = alpha),
+                            topLeft = Offset(-2.2f, cyy - 5.2f),
+                            size = Size(4.4f, 10.4f),
+                            cornerRadius = CornerRadius(1.6f),
+                        )
+                        drawRoundRect(
+                            color = Color(0xFFD63030).copy(alpha = alpha),
+                            topLeft = Offset(-5.2f, cyy - 2.2f),
+                            size = Size(10.4f, 4.4f),
+                            cornerRadius = CornerRadius(1.6f),
                         )
                     }
                 }
@@ -847,6 +999,44 @@ object Painters {
                         )
                         drawCircle(Color(0xFFFF6B5E).copy(alpha = 0.35f * alpha), 7f, Offset(-6.8f, -hl * 0.40f + 5f))
                         drawCircle(Color(0xFF6FB6FF).copy(alpha = 0.35f * alpha), 7f, Offset(6.8f, -hl * 0.40f + 5f))
+                    }
+                    if (isSport) {
+                        // twin racing stripes over hood and trunk
+                        for (sx in listOf(-1f, 1f)) {
+                            drawRoundRect(
+                                color = Color.White.copy(alpha = 0.85f * alpha),
+                                topLeft = Offset(sx * 9f - 3.5f, -hl * 0.97f),
+                                size = Size(7f, hl * 0.11f),
+                                cornerRadius = CornerRadius(3.5f),
+                            )
+                            drawRoundRect(
+                                color = Color.White.copy(alpha = 0.85f * alpha),
+                                topLeft = Offset(sx * 9f - 3.5f, hl * 0.70f),
+                                size = Size(7f, hl * 0.12f),
+                                cornerRadius = CornerRadius(3.5f),
+                            )
+                        }
+                        // rear spoiler: two mounts + glossy blade
+                        for (sx in listOf(-1f, 1f)) {
+                            drawRoundRect(
+                                color = color.deep.copy(alpha = 0.9f * alpha),
+                                topLeft = Offset(sx * hw * 0.42f - 2.5f, hl * 0.82f),
+                                size = Size(5f, 7f),
+                                cornerRadius = CornerRadius(2.5f),
+                            )
+                        }
+                        drawRoundRect(
+                            color = color.deep.copy(alpha = alpha),
+                            topLeft = Offset(-hw * 0.62f, hl * 0.87f),
+                            size = Size(hw * 1.24f, 8f),
+                            cornerRadius = CornerRadius(4f),
+                        )
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.3f * alpha),
+                            topLeft = Offset(-hw * 0.62f, hl * 0.87f),
+                            size = Size(hw * 1.24f, 3f),
+                            cornerRadius = CornerRadius(1.5f),
+                        )
                     }
                 }
             }

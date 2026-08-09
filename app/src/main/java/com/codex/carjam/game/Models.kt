@@ -151,4 +151,6 @@ data class CarSpec(
     val type: CarType,
     val color: CarColor,
     val mystery: Boolean,
+    /** >0 ⇒ frozen in ice: that many taps to crack before the car can move. */
+    val frozen: Int = 0,
 )

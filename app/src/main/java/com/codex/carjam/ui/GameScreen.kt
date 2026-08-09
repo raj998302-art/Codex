@@ -65,6 +65,7 @@ fun GameScreen(
         { f: Fx ->
             when (f) {
                 Fx.TAP -> sound.tap()
+                Fx.CRACK -> sound.crack()
                 Fx.BLOCKED -> {
                     sound.blocked()
                     if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)

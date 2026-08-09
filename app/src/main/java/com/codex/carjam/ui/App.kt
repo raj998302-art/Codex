@@ -1,5 +1,6 @@
 package com.codex.carjam.ui
 
+import android.app.Activity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -23,10 +24,20 @@ private sealed interface Screen {
     data object Home : Screen
 
     data class Game(val level: Int, val attempt: Int, val practice: Boolean) : Screen
+
+    // v3.3 full-page experiences (reference banner screens)
+    data object SkinShop : Screen
+
+    data object Collection : Screen
+
+    data object Leaderboard : Screen
+
+    data object Profile : Screen
 }
 
 @Composable
 fun CarJamApp() {
+    val viewContext = LocalContext.current
     val context = LocalContext.current.applicationContext
     val prefs = remember { Prefs(context) }
     val sound = remember { SoundManager(prefs) }
@@ -86,7 +97,59 @@ fun CarJamApp() {
             onPlay = { lvl -> screen = Screen.Game(lvl, attempt = 0, practice = false) },
             onPractice = { screen = Screen.Game(prefs.maxLevel.intValue, attempt = 0, practice = true) },
             onRefreshNet = { online = Net.isOnline(context) },
+            onOpenSkinShop = { screen = Screen.SkinShop },
+            onOpenCollection = { screen = Screen.Collection },
+            onOpenLeaderboard = { screen = Screen.Leaderboard },
+            onOpenProfile = { screen = Screen.Profile },
         )
+
+        Screen.SkinShop -> SkinShopScreen(
+            prefs = prefs,
+            ads = ads,
+            onNav = { tab ->
+                screen = when (tab) {
+                    BannerTab.HOME -> Screen.Home
+                    BannerTab.COLLECTION -> Screen.Collection
+                    BannerTab.LEADERBOARD -> Screen.Leaderboard
+                    else -> Screen.SkinShop
+                }
+            },
+        )
+
+        Screen.Collection -> CollectionScreen(
+            prefs = prefs,
+            onNav = { tab ->
+                screen = when (tab) {
+                    BannerTab.HOME -> Screen.Home
+                    BannerTab.SKIN -> Screen.SkinShop
+                    BannerTab.LEADERBOARD -> Screen.Leaderboard
+                    else -> Screen.Collection
+                }
+            },
+        )
+
+        Screen.Leaderboard -> LeaderboardScreen(
+            prefs = prefs,
+            onNav = { tab ->
+                screen = when (tab) {
+                    BannerTab.HOME -> Screen.Home
+                    BannerTab.COLLECTION -> Screen.Collection
+                    BannerTab.SKIN -> Screen.SkinShop
+                    else -> Screen.Leaderboard
+                }
+            },
+            onOpenProfile = { screen = Screen.Profile },
+        )
+
+        Screen.Profile -> (viewContext as? Activity)?.let { act ->
+            ProfileScreen(
+                prefs = prefs,
+                ads = ads,
+                activity = act,
+                onOpenShop = { screen = Screen.Home },
+                onClose = { screen = Screen.Home },
+            )
+        }
 
         is Screen.Game -> GameScreen(
             level = s.level,

@@ -430,8 +430,8 @@ object Painters {
 
     private fun DrawScope.drawThemeDeco(theme: LevelTheme, ms: Float) {
         when (theme.deco) {
-            Deco.SEA -> {
             Deco.EVENT -> {} // bisect-tolerant
+            Deco.SEA -> {
                 // light rays
                 withTransform({ rotate(-18f, Offset(220f, 0f)) }) {
                     drawRect(Color.White.copy(alpha = 0.10f), topLeft = Offset(160f, -60f), size = Size(90f, 700f))
@@ -1268,8 +1268,8 @@ object Painters {
 
             // ---------- type-specific dressing
             when (type) {
-                CarType.BUS -> {
                 CarType.TOURIST -> {} // bisect-tolerant
+                CarType.BUS -> {
                     // amber route board at the front
                     drawRoundRect(
                         color = Color(0xFFFFC94D).copy(alpha = 0.95f * alpha),

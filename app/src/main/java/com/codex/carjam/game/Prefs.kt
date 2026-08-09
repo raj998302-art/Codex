@@ -26,6 +26,8 @@ class Prefs(context: Context) {
         private set
     var removeAds = mutableStateOf(securedFlagGet(KEY_NOADS_S, KEY_NOADS_B, KEY_NO_ADS))
         private set
+    var gems = mutableIntStateOf(securedGet(KEY_GEMS_S, KEY_GEMS_B, "", 30).toInt().coerceIn(0, MAX_GEMS))
+        private set
 
     // ---------------------------------------------------------------- progress
 
@@ -54,6 +56,10 @@ class Prefs(context: Context) {
     var practiceWins = mutableIntStateOf(sp.getInt(KEY_PRACTICE_WINS, 0))
         private set
     var referredBy = mutableStateOf<String?>(sp.getString(KEY_REFERRED, null))
+        private set
+
+    /** Last day (epoch) the daily-event popup was auto-shown. */
+    var eventSeenDay = mutableIntStateOf(sp.getInt(KEY_EVENT_DAY, -1))
         private set
 
     val myReferralCode: String get() = Referral.myCode(installSalt)
@@ -191,9 +197,30 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_REFERRED, code).apply()
     }
 
+    fun addGems(amount: Int) {
+        val grant = if (amount > 0) amount.coerceAtMost(MAX_SINGLE_GRANT) else amount
+        val v = (gems.intValue + grant).coerceIn(0, MAX_GEMS)
+        gems.intValue = v
+        securedSet(KEY_GEMS_S, KEY_GEMS_B, v.toLong())
+    }
+
+    /** True when affordable (and deducted), false otherwise. */
+    fun spendGems(cost: Int): Boolean {
+        if (cost <= 0) return true
+        if (gems.intValue < cost) return false
+        addGems(-cost)
+        return true
+    }
+
+    fun markEventSeen(epochDay: Int) {
+        eventSeenDay.intValue = epochDay
+        sp.edit().putInt(KEY_EVENT_DAY, epochDay).apply()
+    }
+
     companion object {
         const val AVATAR_COUNT = 8
         private const val MAX_COINS = 10_000_000
+        private const val MAX_GEMS = 500_000
         private const val MAX_SINGLE_GRANT = 500_000
 
         private const val KEY_COINS = "coins"                    // legacy plain
@@ -216,6 +243,9 @@ class Prefs(context: Context) {
         private const val KEY_LOSSES = "losses"
         private const val KEY_PRACTICE_WINS = "practice_wins"
         private const val KEY_REFERRED = "referred_by"
+        private const val KEY_GEMS_S = "gems.s"
+        private const val KEY_GEMS_B = "gems.b"
+        private const val KEY_EVENT_DAY = "event_seen_day"
         private const val KEY_TAMPER = "tamper_flags"
     }
 }

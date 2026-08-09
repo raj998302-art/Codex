@@ -50,20 +50,23 @@ object LevelGenerator {
         val slotCount = when {
             level <= 2 -> 4
             level <= 6 -> 5
-            else -> 6
+            level <= 14 -> 6
+            else -> 7
         }
+        // Difficulty ramp: the jam should look PACKED — the Play Store reference
+        // fills the board with 40-60+ cars once you're out of the tutorial.
         val styleCap = when (style) {
-            LayoutStyle.GRID -> 56
-            LayoutStyle.DISC -> 46
-            LayoutStyle.SPIRAL -> 46
-            LayoutStyle.DIAGONAL -> 34
-            LayoutStyle.HEART -> 40
+            LayoutStyle.GRID -> 64
+            LayoutStyle.DISC -> 56
+            LayoutStyle.SPIRAL -> 52
+            LayoutStyle.DIAGONAL -> 44
+            LayoutStyle.HEART -> 52
         }
-        val baseCount = min((10 + level * 2), styleCap).coerceAtLeast(12)
+        val baseCount = min((14 + level * 3), styleCap).coerceAtLeast(14)
         val baseSeed = level * 7919 + 17
 
         for (attempt in 0 until 30) {
-            val count = (baseCount - attempt / 6).coerceAtLeast(12)
+            val count = (baseCount - attempt / 5).coerceAtLeast(14)
             val rng = Random(baseSeed + attempt * 977)
             val placed = tryPlace(style, count, rng) ?: continue
             val order = eliminationOrder(placed, rng) ?: continue
@@ -84,7 +87,7 @@ object LevelGenerator {
 
             // Mystery ("?") cars on later levels – but never among the first escapees.
             if (level >= 4 || mysteryBoost > 0) {
-                val mysteryCount = min(1 + level / 3 + mysteryBoost, min(order.size / 4, 12))
+                val mysteryCount = min(1 + level / 3 + mysteryBoost, min(order.size / 4, 16))
                 val pool = order.subList((order.size * 0.25f).toInt(), order.size).toMutableList()
                 repeat(mysteryCount) {
                     if (pool.isEmpty()) return@repeat
@@ -228,6 +231,9 @@ object LevelGenerator {
                 val jy = (rng.nextFloat() - 0.5f) * 14f
                 val angles = if (style == LayoutStyle.GRID) {
                     listOf(0f, 90f, 180f, 270f)
+                } else if (cells!!.size > 28) {
+                    // dense diagonal boards mix axis cars in so the jam still packs tight
+                    listOf(45f, 135f, 225f, 315f, 0f, 90f, 180f, 270f)
                 } else {
                     listOf(45f, 135f, 225f, 315f)
                 }
@@ -293,8 +299,9 @@ object LevelGenerator {
     private fun gridCols(count: Int): Int = when {
         count <= 18 -> 5
         count <= 30 -> 6
-        count <= 44 -> 7
-        else -> 8
+        count <= 46 -> 7
+        count <= 58 -> 8
+        else -> 9
     }
 
     /** Cell centres, pre-shuffled, sized to the placement rect. */
@@ -308,6 +315,7 @@ object LevelGenerator {
         } else {
             gridCols(count)
         }
+
         val rows = ceil(count.toDouble() / cols).toInt()
         gridCellW = (placeR - placeL) / cols
         gridCellH = (placeB - placeT) / rows

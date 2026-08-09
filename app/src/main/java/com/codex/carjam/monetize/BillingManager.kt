@@ -151,9 +151,10 @@ class BillingManager(
                 }
 
                 else -> {
-                    val coins = COINS_BY_PRODUCT[productId] ?: 0
-                    if (coins > 0) {
-                        prefs.addCoins(coins)
+                    val reward = PRODUCT_REWARDS[productId]
+                    if (reward != null && (reward.first > 0 || reward.second > 0)) {
+                        if (reward.first > 0) prefs.addCoins(reward.first)
+                        if (reward.second > 0) prefs.addGems(reward.second)
                         val params = ConsumeParams.newBuilder()
                             .setPurchaseToken(purchase.purchaseToken)
                             .build()
@@ -179,20 +180,35 @@ class BillingManager(
         const val PRODUCT_NO_ADS = "remove_ads"
         const val PRICE_NO_ADS_DEFAULT = "₹99"
 
-        val COINS_BY_PRODUCT: Map<String, Int> = mapOf(
-            "coins_120" to 120,
-            "coins_400" to 400,
-            "coins_1000" to 1000,
-            "coins_2500" to 2500,
+        /** productId → (coins, gems) granted on purchase. */
+        val PRODUCT_REWARDS: Map<String, Pair<Int, Int>> = mapOf(
+            "coins_120" to (120 to 0),
+            "coins_400" to (400 to 0),
+            "coins_1000" to (1000 to 0),
+            "coins_2500" to (2500 to 0),
+            "gems_80" to (0 to 80),
+            "gems_250" to (0 to 250),
+            "gems_700" to (0 to 700),
         )
+
+        val COINS_BY_PRODUCT: Map<String, Int> = PRODUCT_REWARDS
+            .filterValues { it.first > 0 }
+            .mapValues { it.value.first }
+
+        val GEMS_BY_PRODUCT: Map<String, Int> = PRODUCT_REWARDS
+            .filterValues { it.second > 0 }
+            .mapValues { it.value.second }
 
         val DEFAULT_PRICES: Map<String, String> = mapOf(
             "coins_120" to "₹29",
             "coins_400" to "₹79",
             "coins_1000" to "₹149",
             "coins_2500" to "₹299",
+            "gems_80" to "₹49",
+            "gems_250" to "₹129",
+            "gems_700" to "₹299",
         )
 
-        val PRODUCT_IDS: List<String> = listOf(PRODUCT_NO_ADS) + COINS_BY_PRODUCT.keys
+        val PRODUCT_IDS: List<String> = listOf(PRODUCT_NO_ADS) + PRODUCT_REWARDS.keys
     }
 }

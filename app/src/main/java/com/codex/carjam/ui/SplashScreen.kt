@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.game.CarColor
 import com.codex.carjam.game.CarType
+import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 
 /**
@@ -121,7 +122,7 @@ fun SplashScreen(
                         .padding(horizontal = 20.dp, vertical = 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    BasicText("📡", style = TextStyle(fontSize = 34.sp))
+                    GameIcon(GameIconKind.WIFI_OFF, 42.dp)
                     SpacerH(6.dp)
                     BasicText(
                         "NO INTERNET",
@@ -135,7 +136,7 @@ fun SplashScreen(
                     SpacerH(14.dp)
                     SquishyButton("RETRY", onClick = onRetry, top = Color(0xFF6FB6FF), bottom = Color(0xFF3B7FE0), height = 46.dp, textSize = 15.dp)
                     SpacerH(8.dp)
-                    SquishyButton("PLAY OFFLINE 🎓", onClick = onPlayOffline, height = 46.dp, textSize = 15.dp)
+                    SquishyButton("PLAY OFFLINE", onClick = onPlayOffline, height = 46.dp, textSize = 15.dp, icon = { GameIcon(GameIconKind.GRAD_CAP, 22.dp) })
                 }
             }
             Spacer(Modifier.height(64.dp))

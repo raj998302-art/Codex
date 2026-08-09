@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codex.carjam.game.render.GameIconKind
+import com.codex.carjam.game.render.Icons
 import com.codex.carjam.game.render.Painters
 
 /** Big outlined game-style text (native-canvas double pass). */
@@ -73,6 +75,7 @@ fun SquishyButton(
     bottom: Color = Color(0xFF28A745),
     textSize: Dp = 22.dp,
     height: Dp = 58.dp,
+    icon: (@Composable () -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -97,19 +100,22 @@ fun SquishyButton(
                 .clickable(interactionSource = interaction, indication = null) { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            BasicText(
-                text = label,
-                style = TextStyle(
-                    color = Color.White,
-                    fontSize = textSize.value.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.1.sp,
-                ),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon?.invoke()
+                if (icon != null) SpacerW(8.dp)
+                BasicText(
+                    text = label,
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = textSize.value.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.1.sp,
+                    ),
+                )
+            }
         }
     }
 }
-
 @Composable
 fun Pill(
     text: String,
@@ -185,6 +191,45 @@ fun AvatarIcon(id: Int, sizeDp: Dp = 42.dp, modifier: Modifier = Modifier) {
     Canvas(modifier.size(sizeDp)) {
         val s = size.width
         with(Painters) { drawAvatar(id, s / 2f, s / 2f, s * 0.48f) }
+    }
+}
+
+/** Procedural game icon (zero emoji — see render/Icons.kt). */
+@Composable
+fun GameIcon(kind: GameIconKind, sizeDp: Dp = 26.dp, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(sizeDp)) {
+        val s = size.width
+        with(Icons) { icon(kind, 0f, 0f, s) }
+    }
+}
+
+/** Diamond wallet pill (gems). */
+@Composable
+fun GemPill(gems: Int, modifier: Modifier = Modifier, onPlus: () -> Unit = {}) {
+    Row(
+        modifier
+            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+            .border(2.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+            .padding(start = 6.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GameIcon(GameIconKind.GEM, 24.dp)
+        SpacerW(6.dp)
+        BasicText(
+            text = "$gems",
+            style = TextStyle(color = Color(0xFF9BE7FF), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold),
+        )
+        SpacerW(8.dp)
+        Box(
+            Modifier
+                .size(26.dp)
+                .background(Color(0xFF38BDF8), CircleShape)
+                .border(2.dp, Color.White.copy(alpha = 0.7f), CircleShape)
+                .clickable { onPlus() },
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText("+", style = TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold))
+        }
     }
 }
 

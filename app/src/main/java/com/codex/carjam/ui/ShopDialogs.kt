@@ -37,6 +37,7 @@ import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.Leaderboard
 import com.codex.carjam.game.Prefs
+import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
 import java.util.Calendar
@@ -103,7 +104,7 @@ fun ShopDialog(
                         )
                         SpacerH(10.dp)
                         if (prefs.removeAds.value) {
-                            SquishyButton("ACTIVE ✓", onClick = {}, top = Color(0xFF58D76B), bottom = Color(0xFF28A745), height = 44.dp, textSize = 15.dp)
+                            SquishyButton("ACTIVE", onClick = {}, top = Color(0xFF58D76B), bottom = Color(0xFF28A745), height = 44.dp, textSize = 15.dp, icon = { GameIcon(GameIconKind.SHIELD, 18.dp) })
                         } else {
                             SquishyButton(
                                 "BUY  ${billing.priceFor(BillingManager.PRODUCT_NO_ADS) ?: BillingManager.PRICE_NO_ADS_DEFAULT}",
@@ -119,6 +120,16 @@ fun ShopDialog(
 
                 SpacerH(14.dp)
                 BasicText("COIN PACKS", style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp))
+                SpacerH(8.dp)
+                Image(
+                    painter = painterResource(R.drawable.pack_coins),
+                    contentDescription = "Coin packs",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .clip(RoundedCornerShape(18.dp)),
+                    contentScale = ContentScale.Crop,
+                )
                 SpacerH(8.dp)
 
                 // ---- Coin packs (2 per row)
@@ -160,7 +171,7 @@ fun ShopDialog(
 
                 // ---- Free coins via rewarded ad
                 SquishyButton(
-                    "FREE +50 COINS ▶ AD",
+                    "FREE +50 COINS",
                     onClick = {
                         ads.showRewarded(activity = activity, onReward = { prefs.addCoins(50) })
                     },
@@ -168,7 +179,52 @@ fun ShopDialog(
                     bottom = Color(0xFF8A45C4),
                     height = 44.dp,
                     textSize = 14.dp,
+                    icon = { GameIcon(GameIconKind.PLAY_AD, 20.dp) },
                 )
+
+                SpacerH(14.dp)
+                BasicText("GEM PACKS", style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp))
+                SpacerH(8.dp)
+                Image(
+                    painter = painterResource(R.drawable.pack_gems),
+                    contentDescription = "Gem packs",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .clip(RoundedCornerShape(18.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+                SpacerH(8.dp)
+                // ---- Gem packs (3 per row)
+                val gemPacks = BillingManager.GEMS_BY_PRODUCT.entries.sortedBy { it.value }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (g in gemPacks) {
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .background(Color(0xFFEFF7FF), RoundedCornerShape(18.dp))
+                                .border(2.dp, Color(0xFF38BDF8), RoundedCornerShape(18.dp))
+                                .padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            GameIcon(GameIconKind.GEM, 26.dp)
+                            SpacerH(2.dp)
+                            BasicText("${g.value}", style = TextStyle(color = Dark, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold))
+                            if (g.value >= 700) {
+                                BasicText("BEST VALUE", style = TextStyle(color = Color(0xFF2FA84F), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold))
+                            }
+                            SpacerH(6.dp)
+                            SquishyButton(
+                                billing.priceFor(g.key) ?: (BillingManager.DEFAULT_PRICES[g.key] ?: "₹--"),
+                                onClick = { billing.launchPurchase(activity, g.key) },
+                                top = Color(0xFF38BDF8),
+                                bottom = Color(0xFF0E7BC0),
+                                height = 34.dp,
+                                textSize = 12.dp,
+                            )
+                        }
+                    }
+                }
 
                 SpacerH(10.dp)
                 BasicText(
@@ -196,22 +252,11 @@ fun EventsDialog(onClose: () -> Unit) {
         PanelCard(Modifier.width(350.dp)) {
             DialogTitleText("DAILY EVENTS")
             SpacerH(10.dp)
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(ev.accent, ev.accent.copy(alpha = 0.75f))), RoundedCornerShape(20.dp))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                BasicText(ev.emoji, style = TextStyle(fontSize = 38.sp))
-                BasicText(ev.title, style = TextStyle(color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold))
-                BasicText(ev.subtitle, style = TextStyle(color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp), modifier = Modifier.padding(top = 2.dp))
-                SpacerH(6.dp)
-                BasicText(
-                    "Ends in ${formatHMS(Events.msUntilMidnight())}",
-                    style = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                )
-            }
+            EventBannerCard(
+                event = ev,
+                height = 104.dp,
+                trailingText = "Ends in ${formatHMS(Events.msUntilMidnight())}",
+            )
             SpacerH(12.dp)
             BasicText("COMING UP", style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp))
             SpacerH(6.dp)
@@ -232,7 +277,7 @@ fun EventsDialog(onClose: () -> Unit) {
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BasicText(e.emoji, style = TextStyle(fontSize = 18.sp))
+                    GameIcon(eventIconKind(e.id), 26.dp)
                     SpacerW(8.dp)
                     Column(Modifier.weight(1f)) {
                         BasicText(e.title, style = TextStyle(color = Dark, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold))
@@ -258,7 +303,7 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
             DialogTitleText("WEEKLY RANK")
             SpacerH(6.dp)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BasicText("🏆", style = TextStyle(fontSize = 24.sp))
+                GameIcon(GameIconKind.TROPHY, 28.dp)
                 SpacerW(8.dp)
                 BasicText(
                     "You are #$yourRank  •  ends in ${formatDH(Events.msUntilNextWeek())}",
@@ -273,7 +318,6 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                     .verticalScroll(rememberScrollState()),
             ) {
                 for (e in board) {
-                    val medal = when (e.rank) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> null }
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -285,11 +329,17 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        BasicText(
-                            medal ?: "#${e.rank}",
-                            style = TextStyle(color = if (e.isYou) Dark else Muted, fontSize = if (medal != null) 18.sp else 13.sp, fontWeight = FontWeight.ExtraBold),
-                            modifier = Modifier.width(42.dp),
-                        )
+                        Box(Modifier.width(42.dp), contentAlignment = Alignment.CenterStart) {
+                            when (e.rank) {
+                                1 -> GameIcon(GameIconKind.MEDAL_1, 30.dp)
+                                2 -> GameIcon(GameIconKind.MEDAL_2, 30.dp)
+                                3 -> GameIcon(GameIconKind.MEDAL_3, 30.dp)
+                                else -> BasicText(
+                                    "#${e.rank}",
+                                    style = TextStyle(color = if (e.isYou) Dark else Muted, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                )
+                            }
+                        }
                         BasicText(
                             e.name,
                             style = TextStyle(color = Dark, fontSize = 15.sp, fontWeight = if (e.isYou) FontWeight.ExtraBold else FontWeight.SemiBold),
@@ -303,11 +353,19 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                 }
             }
             SpacerH(8.dp)
-            BasicText(
-                "Top 3 this week win 🪙500 / 🪙250 / 🪙150",
-                style = TextStyle(color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                BasicText("Top 3 this week win  ", style = TextStyle(color = Muted, fontSize = 12.sp))
+                CoinIcon(16.dp)
+                BasicText("500 / ", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                CoinIcon(16.dp)
+                BasicText("250 / ", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                CoinIcon(16.dp)
+                BasicText("150", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+            }
             SpacerH(8.dp)
             SquishyButton("CLOSE", onClick = onClose, height = 46.dp, textSize = 15.dp)
             SpacerH(4.dp)
@@ -326,7 +384,7 @@ fun DailyRewardDialog(prefs: Prefs, onClaimed: (Int) -> Unit, onClose: () -> Uni
             DialogTitleText("DAILY REWARD")
             SpacerH(6.dp)
             BasicText(
-                "Come back every day — day 7 is BIG!",
+                "Come back every day — day 7 is BIG! Gems on days 3, 6 & 7.",
                 style = TextStyle(color = Muted, fontSize = 13.sp),
             )
             SpacerH(12.dp)
@@ -366,12 +424,19 @@ fun DailyRewardDialog(prefs: Prefs, onClaimed: (Int) -> Unit, onClose: () -> Uni
                             BasicText("DAY $day", style = TextStyle(color = if (isNext) Dark else Muted, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold))
                             SpacerH(4.dp)
                             if (claimed) {
-                                BasicText("✓", style = TextStyle(color = Color(0xFF4CAF50), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold))
+                                GameIcon(GameIconKind.SHIELD, 22.dp)
                             } else {
                                 CoinIcon(if (day == 7) 30.dp else 22.dp)
                             }
                             SpacerH(4.dp)
                             BasicText("$prize", style = TextStyle(color = Dark, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold))
+                            DailyRewards.gemPrizes[day]?.let { g ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    GameIcon(GameIconKind.GEM, 13.dp)
+                                    SpacerW(2.dp)
+                                    BasicText("+$g", style = TextStyle(color = Color(0xFF0E7BC0), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold))
+                                }
+                            }
                         }
                     }
                     if (row.size == 3) Box(Modifier.weight(1f))
@@ -380,12 +445,14 @@ fun DailyRewardDialog(prefs: Prefs, onClaimed: (Int) -> Unit, onClose: () -> Uni
             }
             SpacerH(8.dp)
             if (canClaim) {
-                SquishyButton("CLAIM +${DailyRewards.prizes[(nextDay - 1)]}", onClick = {
+                val claimCoins = DailyRewards.prizes[(nextDay - 1).coerceIn(0, DailyRewards.prizes.size - 1)]
+                val claimGems = DailyRewards.gemPrizes[nextDay] ?: 0
+                SquishyButton(if (claimGems > 0) "CLAIM +$claimCoins +$claimGems GEMS" else "CLAIM +$claimCoins", onClick = {
                     val got = DailyRewards.claim(prefs)
                     onClaimed(got)
                 }, top = Color(0xFFFFB340), bottom = Color(0xFFE07F00), height = 50.dp, textSize = 17.dp)
             } else {
-                SquishyButton("CLAIMED TODAY ✓", onClick = {}, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 50.dp, textSize = 15.dp)
+                SquishyButton("CLAIMED TODAY", onClick = {}, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 50.dp, textSize = 15.dp)
             }
             SpacerH(10.dp)
             SquishyButton("CLOSE", onClick = onClose, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 44.dp, textSize = 14.dp)

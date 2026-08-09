@@ -37,6 +37,7 @@ import com.codex.carjam.game.GameResult
 import com.codex.carjam.game.LevelGenerator
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
+import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
@@ -160,6 +161,8 @@ fun GameScreen(
                 Pill("Level $level", bg = Color.Black.copy(alpha = 0.55f))
                 Spacer(Modifier.weight(1f))
                 CoinPill(prefs.coins.intValue, onPlus = { showShop = true; sound.coin() })
+                SpacerW(6.dp)
+                GemPill(prefs.gems.intValue, onPlus = { showShop = true; sound.coin() })
             }
             Row(
                 Modifier.padding(top = 8.dp),
@@ -167,8 +170,9 @@ fun GameScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 Pill(
-                    if (practice) "🎓 PRACTICE MODE — free play, no coins at stake" else "${event.emoji} ${event.title}",
+                    if (practice) "PRACTICE MODE — free play, no coins at stake" else event.title,
                     bg = if (practice) Color(0xFF607D8B).copy(alpha = 0.9f) else event.accent.copy(alpha = 0.85f),
+                    icon = { GameIcon(if (practice) GameIconKind.GRAD_CAP else eventIconKind(event.id), 20.dp) },
                 )
                 Spacer(Modifier.weight(1f))
             }
@@ -192,6 +196,7 @@ fun GameScreen(
             LoseDialog(
                 reason = engine.loseReason,
                 canRevive = ads.rewardedReady.value,
+                gemsAvailable = prefs.gems.intValue >= 25,
                 onRevive = {
                     val act = view.context as? Activity
                     if (act != null) {
@@ -199,6 +204,9 @@ fun GameScreen(
                     } else {
                         engine.revive(2)
                     }
+                },
+                onReviveGems = {
+                    if (prefs.spendGems(25)) engine.revive(2)
                 },
                 onRetry = { onRetry() },
                 onHome = onHome,

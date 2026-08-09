@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.game.Prefs
+import com.codex.carjam.game.render.GameIconKind
 
 @Composable
 private fun DialogTitle(text: String, fill: Color, outline: Color) {
@@ -146,7 +147,9 @@ fun WinDialog(level: Int, coinsEarned: Int, onNext: () -> Unit, onHome: () -> Un
 fun LoseDialog(
     reason: String,
     canRevive: Boolean,
+    gemsAvailable: Boolean,
     onRevive: () -> Unit,
+    onReviveGems: () -> Unit,
     onRetry: () -> Unit,
     onHome: () -> Unit,
 ) {
@@ -160,14 +163,28 @@ fun LoseDialog(
             )
             SpacerH(18.dp)
             SquishyButton(
-                "REVIVE  ▶ AD   (+2 SLOTS)",
+                "REVIVE  +2 SLOTS",
                 onClick = onRevive,
                 top = Color(0xFF58D76B),
                 bottom = Color(0xFF28A745),
+                icon = { GameIcon(GameIconKind.PLAY_AD, 22.dp) },
             )
             SpacerH(6.dp)
             BasicText(
                 text = if (canRevive) "ad ready" else "free revive, no ad needed",
+                style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 11.sp),
+            )
+            SpacerH(8.dp)
+            SquishyButton(
+                "REVIVE  25 GEMS",
+                onClick = onReviveGems,
+                top = Color(0xFF38BDF8),
+                bottom = Color(0xFF0E7BC0),
+                textSize = 18.dp,
+                icon = { GameIcon(GameIconKind.GEM, 20.dp) },
+            )
+            BasicText(
+                text = if (gemsAvailable) "instant, no ad" else "not enough gems",
                 style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 11.sp),
             )
             SpacerH(8.dp)
@@ -224,14 +241,14 @@ fun LevelSelectDialog(maxLevel: Int, onPick: (Int) -> Unit, onClose: () -> Unit)
                             .clickable(enabled = unlocked) { onPick(lvl) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        BasicText(
-                            text = if (unlocked) "$lvl" else "🔒",
-                            style = TextStyle(
-                                color = if (unlocked) Color.White else Color(0xFF6E6250),
-                                fontSize = if (unlocked) 20.sp else 16.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
-                        )
+                        if (unlocked) {
+                            BasicText(
+                                text = "$lvl",
+                                style = TextStyle(color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold),
+                            )
+                        } else {
+                            GameIcon(GameIconKind.LOCK, 22.dp)
+                        }
                     }
                 }
             }

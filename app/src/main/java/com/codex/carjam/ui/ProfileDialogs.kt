@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.Referral
+import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.monetize.PlayGamesManager
 
 private val Ink = Color(0xFF4A3826)
@@ -141,7 +142,11 @@ fun ProfileDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (pgs.signedIn.value) {
-                        BasicText("✔ Google Play connected", style = TextStyle(color = Color(0xFF2FA84F), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            GameIcon(GameIconKind.SHIELD, 18.dp)
+                            SpacerW(6.dp)
+                            BasicText("Google Play connected", style = TextStyle(color = Color(0xFF2FA84F), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold))
+                        }
                         BasicText(
                             pgs.gamerName.value ?: "",
                             style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
@@ -150,10 +155,11 @@ fun ProfileDialog(
                         BasicText("GOOGLE PLAY GAMES", style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold))
                         SpacerH(6.dp)
                         SquishyButton(
-                            "CONNECT  ▶",
+                            "CONNECT",
                             onClick = { pgs.signIn(activity) },
                             height = 40.dp,
                             textSize = 13.dp,
+                            icon = { GameIcon(GameIconKind.PLAY_AD, 18.dp) },
                         )
                         SpacerH(4.dp)
                         BasicText(
@@ -173,7 +179,11 @@ fun ProfileDialog(
                         .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    BasicText("🎁 REFER & EARN", style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GameIcon(GameIconKind.GIFT, 22.dp)
+                        SpacerW(6.dp)
+                        BasicText("REFER & EARN", style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp))
+                    }
                     SpacerH(6.dp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         BasicText(
@@ -221,12 +231,12 @@ fun ProfileDialog(
                                 .background(Color(0xFF58D76B), RoundedCornerShape(12.dp))
                                 .border(2.dp, Color(0xFF28A745), RoundedCornerShape(12.dp))
                                 .clickable {
-                                    refMsg = when (Referral.redeem(prefs, refDraft)) {
-                                        Referral.Result.SUCCESS -> "🎉 +${Referral.WELCOME_BONUS} coins added!"
-                                        Referral.Result.OWN_CODE -> "That's your own code 😄 share it!"
-                                        Referral.Result.ALREADY_USED -> "Already redeemed on this device."
-                                        Referral.Result.BAD_FORMAT -> "Format: CJ-XXXXXX"
-                                    }
+                    refMsg = when (Referral.redeem(prefs, refDraft)) {
+                        Referral.Result.SUCCESS -> "Welcome bonus! +${Referral.WELCOME_BONUS} coins added"
+                        Referral.Result.OWN_CODE -> "That's your own code — share it with a friend!"
+                        Referral.Result.ALREADY_USED -> "Already redeemed on this device."
+                        Referral.Result.BAD_FORMAT -> "Format: CJ-XXXXXX"
+                    }
                                 }
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                         ) {
@@ -249,7 +259,7 @@ fun ProfileDialog(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BasicText("🔐", style = TextStyle(fontSize = 16.sp))
+                    GameIcon(GameIconKind.SHIELD, 20.dp)
                     SpacerW(8.dp)
                     BasicText(
                         "Vault armed • purchases verified by Google Play" +

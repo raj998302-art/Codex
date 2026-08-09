@@ -54,6 +54,7 @@ import com.codex.carjam.game.Events
 import com.codex.carjam.game.LevelTheme
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
+import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
@@ -90,6 +91,14 @@ fun HomeScreen(
     LaunchedEffect(online) {
         if (online) activity?.let { pgs.silentCheck(it) }
     }
+    // live-ops popup: pitch today's event once per day
+    val todayEpoch = (System.currentTimeMillis() / 86_400_000L).toInt()
+    LaunchedEffect(Unit) {
+        if (prefs.eventSeenDay.intValue != todayEpoch) {
+            prefs.markEventSeen(todayEpoch)
+            showEvents = true
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         HomeBackdrop(theme)
@@ -121,17 +130,30 @@ fun HomeScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 CoinPill(prefs.coins.intValue, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
+                SpacerW(6.dp)
+                GemPill(prefs.gems.intValue, onPlus = { sound.tap(); if (!online) onRefreshNet(); showShop = true })
             }
 
             SpacerH(34.dp)
             OutlinedTextC("CAR JAM", 64.dp, fill = Color.White, outline = Color(0xFF20303C))
             OutlinedTextC("SOLVER", 30.dp, fill = Color(0xFFFFD32E), outline = Color(0xFF7A4A00))
             SpacerH(8.dp)
-            Pill(
-                text = if (online) "${event.emoji} ${event.title} is LIVE" else "📴 OFFLINE MODE — everything still playable",
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                bg = if (online) event.accent.copy(alpha = 0.9f) else Color(0xFF607D8B).copy(alpha = 0.9f),
-            )
+            if (online) {
+                EventBannerCard(
+                    event = event,
+                    height = 86.dp,
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                    trailingText = "LIVE NOW — tap for schedule",
+                    onClick = { sound.tap(); showEvents = true },
+                )
+            } else {
+                Pill(
+                    text = "OFFLINE MODE — everything still playable",
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    bg = Color(0xFF607D8B).copy(alpha = 0.9f),
+                    icon = { GameIcon(GameIconKind.WIFI_OFF, 20.dp) },
+                )
+            }
 
             SpacerH(44.dp)
 
@@ -174,10 +196,10 @@ fun HomeScreen(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                ActionChip("🛒", "SHOP") { sound.tap(); showShop = true }
-                ActionChip("🎁", "GIFT", badge = dailyReady) { sound.tap(); showDaily = true }
-                ActionChip("📅", "EVENTS") { sound.tap(); showEvents = true }
-                ActionChip("🏆", "RANK") { sound.tap(); showRank = true }
+                ActionChip(GameIconKind.CART, "SHOP") { sound.tap(); showShop = true }
+                ActionChip(GameIconKind.GIFT, "GIFT", badge = dailyReady) { sound.tap(); showDaily = true }
+                ActionChip(GameIconKind.CALENDAR, "EVENTS") { sound.tap(); showEvents = true }
+                ActionChip(GameIconKind.TROPHY, "RANK") { sound.tap(); showRank = true }
             }
 
             SpacerH(16.dp)
@@ -192,13 +214,14 @@ fun HomeScreen(
             )
             SpacerH(10.dp)
             SquishyButton(
-                "PRACTICE MODE 🎓",
+                "PRACTICE MODE",
                 onClick = { sound.tap(); onPractice() },
                 modifier = Modifier.width(240.dp).align(Alignment.CenterHorizontally),
                 top = Color(0xFFB678E8),
                 bottom = Color(0xFF8A45C4),
                 textSize = 16.dp,
                 height = 46.dp,
+                icon = { GameIcon(GameIconKind.GRAD_CAP, 22.dp) },
             )
 
             Spacer(Modifier.weight(1f))
@@ -224,8 +247,9 @@ fun HomeScreen(
                 ) {
                     Spacer(Modifier.weight(1f))
                     Pill(
-                        if (online) "Tap cars • match colours • clear the jam" else "📴 Offline — ads & shop take a break",
+                        if (online) "Tap cars • match colours • clear the jam" else "Offline — ads & shop take a break",
                         bg = Color.Black.copy(alpha = 0.35f),
+                        icon = if (online) null else ({ GameIcon(GameIconKind.WIFI_OFF, 18.dp) }),
                     )
                     Spacer(Modifier.weight(1f))
                 }
@@ -280,7 +304,7 @@ private fun LocalActivity(): Activity? =
     androidx.compose.ui.platform.LocalContext.current as? Activity
 
 @Composable
-private fun ActionChip(emoji: String, label: String, badge: Boolean = false, onClick: () -> Unit) {
+private fun ActionChip(kind: GameIconKind, label: String, badge: Boolean = false, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
@@ -290,7 +314,7 @@ private fun ActionChip(emoji: String, label: String, badge: Boolean = false, onC
                 .clickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            BasicText(emoji, style = TextStyle(fontSize = 26.sp))
+            GameIcon(kind, 34.dp)
             if (badge) {
                 Box(
                     Modifier

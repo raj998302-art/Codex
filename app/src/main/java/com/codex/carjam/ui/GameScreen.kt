@@ -5,8 +5,13 @@ import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,8 +32,12 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Dim
 import com.codex.carjam.game.Events
@@ -66,6 +75,18 @@ fun GameScreen(
             when (f) {
                 Fx.TAP -> sound.tap()
                 Fx.CRACK -> sound.crack()
+                Fx.HAMMER -> {
+                    sound.hammer()
+                    if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                }
+
+                Fx.SHUFFLE -> sound.shuffle()
+                Fx.CHAINED -> {
+                    sound.chainLocked()
+                    if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                }
+
+                Fx.CHAINBREAK -> sound.chainBreak()
                 Fx.BLOCKED -> {
                     sound.blocked()
                     if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -132,6 +153,14 @@ fun GameScreen(
 
     var showSettings by remember { mutableStateOf(false) }
     var showShop by remember { mutableStateOf(false) }
+    var showBoostShop by remember { mutableStateOf(false) }
+    var hammerArmed by remember { mutableStateOf(false) }
+    var boostGift by remember { mutableStateOf(false) }
+
+    // one-time v2.7 booster welcome gift
+    LaunchedEffect(Unit) {
+        if (prefs.grantBoosterGiftIfNeeded()) boostGift = true
+    }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF0E1B26))) {
         var viewSize by remember { mutableStateOf(IntSize(1, 1)) }
@@ -139,12 +168,24 @@ fun GameScreen(
             Modifier
                 .fillMaxSize()
                 .onSizeChanged { viewSize = it }
-                .pointerInput(engine) {
+                .pointerInput(engine, hammerArmed) {
                     detectTapGestures { off ->
                         val s = min(viewSize.width / Dim.VW, viewSize.height / Dim.VH)
                         val ox = (viewSize.width - Dim.VW * s) / 2f
                         val oy = (viewSize.height - Dim.VH * s) / 2f
-                        engine.onTap((off.x - ox) / s, (off.y - oy) / s)
+                        val gx = (off.x - ox) / s
+                        val gy = (off.y - oy) / s
+                        if (hammerArmed) {
+                            // armed hammer: only shatters ice, never moves cars,
+                            // and is only spent on a successful smash
+                            val hit = engine.hitCarAt(gx, gy)
+                            if (hit != null && engine.smashIce(hit)) {
+                                prefs.useHammer()
+                                hammerArmed = false
+                            }
+                        } else {
+                            engine.onTap(gx, gy)
+                        }
                     }
                 },
         ) {
@@ -222,6 +263,109 @@ fun GameScreen(
                 onHome = onHome,
             )
         }
+        // armed-hammer hint chip
+        if (hammerArmed && result == GameResult.PLAYING) {
+            Pill(
+                "TAP A FROZEN CAR TO SMASH ITS ICE",
+                bg = Color(0xFF2E7CC4).copy(alpha = 0.92f),
+                icon = { GameIcon(GameIconKind.HAMMER, 22.dp) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 84.dp),
+            )
+        }
+
+        // booster belt
+        Row(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BoostChip(
+                kind = GameIconKind.HAMMER,
+                count = prefs.hammers.intValue,
+                armed = hammerArmed,
+                onClick = {
+                    when {
+                        hammerArmed -> {
+                            hammerArmed = false
+                            sound.tap()
+                        }
+
+                        prefs.hammers.intValue > 0 && result == GameResult.PLAYING -> {
+                            hammerArmed = true
+                            sound.tap()
+                        }
+
+                        else -> {
+                            showBoostShop = true
+                            sound.tap()
+                        }
+                    }
+                },
+            )
+            SpacerW(8.dp)
+            BoostChip(
+                kind = GameIconKind.SHUFFLE,
+                count = prefs.shufflesStock.intValue,
+                armed = false,
+                onClick = {
+                    when {
+                        prefs.shufflesStock.intValue > 0 && result == GameResult.PLAYING -> {
+                            if (engine.shuffleQueue()) prefs.useShuffle()
+                        }
+
+                        else -> {
+                            showBoostShop = true
+                            sound.tap()
+                        }
+                    }
+                },
+            )
+        }
+
+        // one-time booster welcome gift card
+        if (boostGift) {
+            DialogOverlay {
+                PanelCard(Modifier.padding(24.dp)) {
+                    DialogTitleText("WELCOME GIFT")
+                    SpacerH(8.dp)
+                    BasicText(
+                        "Two new boosters just joined your belt — on the house!",
+                        style = TextStyle(
+                            color = Color(0xFF8C6A3F),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        ),
+                    )
+                    SpacerH(10.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GameIcon(GameIconKind.HAMMER, 30.dp)
+                        SpacerW(6.dp)
+                        Pill("2 ICE HAMMERS", bg = Color(0xFF2E7CC4).copy(alpha = 0.9f))
+                        SpacerW(8.dp)
+                        GameIcon(GameIconKind.SHUFFLE, 30.dp)
+                        SpacerW(6.dp)
+                        Pill("3 QUEUE MIXES", bg = Color(0xFF0E9E94).copy(alpha = 0.9f))
+                    }
+                    SpacerH(12.dp)
+                    SquishyButton(
+                        "LET'S GO",
+                        onClick = { boostGift = false; sound.tap() },
+                        height = 46.dp,
+                        textSize = 16.dp,
+                    )
+                    SpacerH(4.dp)
+                }
+            }
+        }
+
+        if (showBoostShop) {
+            BoosterShopDialog(prefs = prefs, onClose = { showBoostShop = false })
+        }
+
         if (showSettings) {
             SettingsDialog(
                 prefs = prefs,
@@ -249,6 +393,52 @@ fun GameScreen(
                 )
             } else {
                 showShop = false
+            }
+        }
+    }
+}
+
+/** Squishy booster button: rounded square icon tile with a count badge. */
+@Composable
+private fun BoostChip(
+    kind: GameIconKind,
+    count: Int,
+    armed: Boolean,
+    onClick: () -> Unit,
+) {
+    val top = if (kind == GameIconKind.HAMMER) Color(0xFF6FB6FF) else Color(0xFF5FE8DC)
+    val bottom = if (kind == GameIconKind.HAMMER) Color(0xFF2E5FBB) else Color(0xFF0E9E94)
+    Box(
+        Modifier
+            .size(56.dp)
+            .background(bottom, RoundedCornerShape(16.dp))
+            .padding(top = 0.dp),
+    ) {
+        Box(
+            Modifier
+                .size(56.dp)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, bottom)), RoundedCornerShape(16.dp))
+                .border(
+                    width = if (armed) 3.dp else 2.dp,
+                    color = if (armed) Color(0xFFFFF3A6) else Color.White.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .clickable { onClick() },
+        ) {
+            GameIcon(kind, 34.dp, modifier = Modifier.align(Alignment.Center))
+            // count / buy-me badge
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(3.dp)
+                    .background(if (count > 0) Color(0xFF2B2B33) else Color(0xFF3DDC5F), RoundedCornerShape(8.dp))
+                    .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 4.dp, vertical = 0.dp),
+            ) {
+                BasicText(
+                    if (count > 0) "$count" else "+",
+                    style = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold),
+                )
             }
         }
     }

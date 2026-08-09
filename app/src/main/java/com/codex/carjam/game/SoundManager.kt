@@ -90,6 +90,14 @@ class SoundManager(private val prefs: Prefs) {
 
     fun crack() = play(ToneGenerator.TONE_CDMA_PIP, 35)
 
+    fun hammer() = play(ToneGenerator.TONE_PROP_BEEP2, 150)
+
+    fun shuffle() = play(ToneGenerator.TONE_PROP_ACK, 60)
+
+    fun chainLocked() = play(ToneGenerator.TONE_PROP_NACK, 120)
+
+    fun chainBreak() = play(ToneGenerator.TONE_PROP_BEEP, 90)
+
     fun blocked() = play(ToneGenerator.TONE_SUP_CONGESTION, 110)
 
     fun whoosh() = play(ToneGenerator.TONE_CDMA_PIP, 90)

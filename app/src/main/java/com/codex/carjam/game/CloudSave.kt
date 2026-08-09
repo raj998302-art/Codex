@@ -81,6 +81,8 @@ object CloudSave {
         .put("musicOn", prefs.musicOn.value)
         .put("rides", prefs.ownedRides.value.joinToString(","))
         .put("rideSel", prefs.selectedRide.value)
+        .put("hammers", prefs.hammers.intValue)
+        .put("shuffles", prefs.shufflesStock.intValue)
 
     private val NUM_KEYS = listOf(
         "coins", "gems", "maxLevel", "totalCoinsEarned",

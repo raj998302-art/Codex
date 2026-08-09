@@ -287,6 +287,19 @@ class Prefs(context: Context) {
                 raised = true
             }
         }
+        // boosters ride along (count-up merge like other wallet fields)
+        val cHam = s.optInt("hammers", -1)
+        if (cHam in 0..99 && cHam > hammers.intValue) {
+            hammers.intValue = cHam
+            sp.edit().putInt(KEY_HAMMERS, cHam).apply()
+            raised = true
+        }
+        val cShu = s.optInt("shuffles", -1)
+        if (cShu in 0..99 && cShu > shufflesStock.intValue) {
+            shufflesStock.intValue = cShu
+            sp.edit().putInt(KEY_SHUFFLES, cShu).apply()
+            raised = true
+        }
         return raised
     }
 
@@ -395,6 +408,49 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_RIDE_SEL, id).apply()
     }
 
+    // ---------------------------------------------------------------- boosters
+
+    var hammers = mutableIntStateOf(sp.getInt(KEY_HAMMERS, 0))
+        private set
+    var shufflesStock = mutableIntStateOf(sp.getInt(KEY_SHUFFLES, 0))
+        private set
+
+    fun addHammers(n: Int) {
+        if (n == 0) return
+        val v = (hammers.intValue + n).coerceIn(0, 99)
+        hammers.intValue = v
+        sp.edit().putInt(KEY_HAMMERS, v).apply()
+    }
+
+    fun addShuffles(n: Int) {
+        if (n == 0) return
+        val v = (shufflesStock.intValue + n).coerceIn(0, 99)
+        shufflesStock.intValue = v
+        sp.edit().putInt(KEY_SHUFFLES, v).apply()
+    }
+
+    /** Spend one hammer; false when the belt is empty. */
+    fun useHammer(): Boolean {
+        if (hammers.intValue <= 0) return false
+        addHammers(-1)
+        return true
+    }
+
+    fun useShuffle(): Boolean {
+        if (shufflesStock.intValue <= 0) return false
+        addShuffles(-1)
+        return true
+    }
+
+    /** One-time v2.7 welcome gift so every player meets the new boosters. */
+    fun grantBoosterGiftIfNeeded(): Boolean {
+        if (sp.getBoolean(KEY_BOOST_GIFT, false)) return false
+        sp.edit().putBoolean(KEY_BOOST_GIFT, true).apply()
+        addHammers(2)
+        addShuffles(3)
+        return true
+    }
+
     fun setRemoveAds(owned: Boolean) {
         removeAds.value = owned
         securedSet(KEY_NOADS_S, KEY_NOADS_B, if (owned) 1L else 0L)
@@ -495,6 +551,9 @@ class Prefs(context: Context) {
         private const val KEY_SOUND = "sound"
         private const val KEY_VIBRATE = "vibrate"
         private const val KEY_MUSIC = "music"
+        private const val KEY_HAMMERS = "boost_hammers"
+        private const val KEY_SHUFFLES = "boost_shuffles"
+        private const val KEY_BOOST_GIFT = "boost_gift_v27"
         private const val KEY_RIDES = "owned_rides"
         private const val KEY_RIDE_SEL = "selected_ride"
         private const val KEY_STREAK = "daily_streak"

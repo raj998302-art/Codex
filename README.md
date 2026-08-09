@@ -182,6 +182,17 @@ player's own saved stats (still zero demo bots).
 | **Background music** | A procedurally composed 24s seamless loop (pads, marimba melody, soft percussion, res/raw/bg_music.wav) that plays app-wide, pauses in background, with a Music toggle in SETTINGS |
 | **Sound FX** | New ice-crack tone; music volume kept low (0.32) so taps stay crisp |
 
+## v2.7 (boosters + new blockers)
+
+| System | What changed |
+| --- | --- |
+| **Ice Hammer booster** | Arm the hammer from the bottom-right belt, tap a frozen car: every ice layer shatters in one blow. Armed taps never move cars and the hammer is only spent on a real smash. Free welcome gift: 2 hammers + 3 mixes |
+| **Queue Mix booster** | Rebuilds the waiting line so the front passenger is immediately useful (a parked car hungry for that colour, else a colour that can move) — passenger counts never change, so the level stays exactly as solvable |
+| **Chain-locked cars (L11+)** | Cars shackled in iron chains with a padlock: they cannot move until their key car leaves the arena. The key always comes earlier in the elimination order, so levels stay provably solvable; chains snap with a satisfying break FX |
+| **Exit gates (L14+)** | One arena side barred by a hazard-striped gate with a live counter badge; lifts after K arena exits. The generator places it on a side whose first use IS the K-th exit — a gate can only delay, never softlock |
+| **Booster shop** | BOOSTER BELT dialog (tap an empty booster or the shop): coin-priced ×1/×3 top-ups; counts clamped server-side (economy clamp) and synced with cloud save |
+| **New sounds** | Hammer smash, queue mix, chain rattle and chain break tones; hammer armed state has a pulsing hint chip |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

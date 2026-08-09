@@ -66,6 +66,8 @@ const saveSchema = new mongoose.Schema(
     musicOn: { type: Boolean, default: true },
     rides: { type: String, default: 'sedan' },     // comma-joined unlocked ride ids
     rideSel: { type: String, default: 'sedan' },
+    hammers: { type: Number, default: 0 },         // booster belt
+    shuffles: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
@@ -148,6 +150,8 @@ const canonicalSave = (doc) => ({
   musicOn: doc.musicOn !== false,
   rides: typeof doc.rides === 'string' && doc.rides ? doc.rides : 'sedan',
   rideSel: typeof doc.rideSel === 'string' && doc.rideSel ? doc.rideSel : 'sedan',
+  hammers: clampInt(doc.hammers, 0, 99),
+  shuffles: clampInt(doc.shuffles, 0, 99),
   updatedAt: new Date(doc.updatedAt).getTime(),
 });
 
@@ -278,6 +282,8 @@ app.post('/api/save', async (req, res) => {
       musicOn,
       rides: rides.join(','),
       rideSel,
+      hammers: economyClamp(P('hammers'), elapsedH, body.hammers, 6, 3, 99),
+      shuffles: economyClamp(P('shuffles'), elapsedH, body.shuffles, 9, 4, 99),
     };
 
     const doc = await Save.findOneAndUpdate(

@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.min
 import kotlin.random.Random
 
-enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK }
+enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK, HAMMER, SHUFFLE, CHAINED, CHAINBREAK }
 
 enum class GameResult { PLAYING, WON, LOST }
 
@@ -137,6 +137,9 @@ class GameEngine(
 
     var seatedCount = 0
         private set
+    /** Cars that have left the arena — feeds the exit-gate counter. */
+    var arenaExits = 0
+        private set
     private var lastActionMs = 0f
     private var resultAtMs = 0f
 
@@ -187,7 +190,24 @@ class GameEngine(
         }
         val dir = facingVec(car.angle)
         val dist = exitDistance(car.pos, dir, Dim.arenaRect, car.hl + car.hw)
-        return sweptClear(car.corners(0.96f), dir, dist, others)
+        if (!sweptClear(car.corners(0.96f), dir, dist, others)) return false
+        // The exit gate bars one side until enough arena exits lift it.
+        if (spec.gateSide >= 0 && !gateOpen() && exitSide(dir) == spec.gateSide) return false
+        return true
+    }
+
+    // ------------------------------------------------------------ gate + chains
+
+    fun gateOpen(): Boolean = spec.gateSide < 0 || arenaExits >= spec.gateNeed
+
+    fun gateRemaining(): Int = (spec.gateNeed - arenaExits).coerceAtLeast(0)
+
+    /** True while this car's chain key car is still sitting in the arena. */
+    fun isChainedActive(car: CarEnt): Boolean {
+        val keyId = car.spec.chainKey
+        if (keyId < 0) return false
+        val key = cars.firstOrNull { it.spec.id == keyId } ?: return false
+        return key.phase == CarPhase.IN_ARENA
     }
 
     private fun busy(): Boolean {
@@ -197,17 +217,18 @@ class GameEngine(
 
     // ------------------------------------------------------------ input
 
+    /** Topmost arena car under a design-space point (booster targeting). */
+    fun hitCarAt(x: Float, y: Float): CarEnt? {
+        val p = Pt(x, y)
+        for (c in cars.asReversed()) {
+            if (c.inArena && pointInPoly(p, c.corners(1.06f))) return c
+        }
+        return null
+    }
+
     fun onTap(x: Float, y: Float) {
         if (result != GameResult.PLAYING) return
-        val p = Pt(x, y)
-        var hit: CarEnt? = null
-        for (c in cars.asReversed()) {
-            if (c.inArena && pointInPoly(p, c.corners(1.06f))) {
-                hit = c
-                break
-            }
-        }
-        val car = hit ?: return
+        val car = hitCarAt(x, y) ?: return
         lastActionMs = ms
 
         // Ice-locked: every tap cracks the shell first; the car can't move yet.
@@ -215,6 +236,13 @@ class GameEngine(
             car.frozenLeft--
             car.wobbleStart = ms
             onFx(Fx.CRACK)
+            return
+        }
+
+        // Chain-locked: shackled until its key car leaves the arena.
+        if (isChainedActive(car)) {
+            car.wobbleStart = ms
+            onFx(Fx.CHAINED)
             return
         }
 
@@ -226,12 +254,104 @@ class GameEngine(
         startExit(car)
     }
 
+    // ------------------------------------------------------------ boosters
+
+    /** Ice Hammer: shatter every ice layer on [car] in one blow. */
+    fun smashIce(car: CarEnt): Boolean {
+        if (result != GameResult.PLAYING) return false
+        if (!car.inArena || car.frozenLeft <= 0) return false
+        car.frozenLeft = 0
+        car.wobbleStart = ms
+        car.popStart = ms
+        lastActionMs = ms
+        onFx(Fx.HAMMER)
+        return true
+    }
+
+    /**
+     * Queue Mix: rebuild the waiting line so its front passenger is useful right
+     * now (a parked car hungry for that colour, else a colour that can move),
+     * the rest shuffled. Passenger counts are never touched, so the level stays
+     * exactly as solvable as before.
+     */
+    fun shuffleQueue(): Boolean {
+        if (result != GameResult.PLAYING) return false
+        if (waiting.size + backlog.size < 2) return false
+        val hungry = LinkedHashSet<CarColor>()
+        for (c in cars) {
+            if (c.phase == CarPhase.PARKED && c.revealed && c.seatsFilled < c.type.seats && boardAnims.none { it.car === c }) {
+                hungry.add(c.color)
+            }
+        }
+        val movable = LinkedHashSet<CarColor>()
+        for (c in cars) {
+            if (c.inArena && c.revealed && c.frozenLeft <= 0 && !isChainedActive(c) && isClear(c)) {
+                movable.add(c.color)
+            }
+        }
+        // find a "hero" passenger: prefer someone a parked car can take, from the
+        // visible line first, else fish it out of the hidden backlog
+        var hero: PassengerEnt? = null
+        var heroFromBacklog = false
+        for (pool in listOf(hungry, movable)) {
+            if (hero != null) break
+            if (pool.isEmpty()) continue
+            for (p in waiting) {
+                if (pool.contains(p.color)) {
+                    hero = p
+                    break
+                }
+            }
+            if (hero == null) {
+                var i = 0
+                while (i < backlog.size) {
+                    if (pool.contains(backlog[i])) {
+                        val col = backlog.removeAt(i)
+                        hero = PassengerEnt(col).apply {
+                            x = Dim.QUEUE_X0
+                            y = Dim.QUEUE_Y
+                        }
+                        heroFromBacklog = true
+                        break
+                    }
+                    i++
+                }
+            }
+        }
+        val rest = waiting.filter { it !== hero }.toMutableList()
+        rest.shuffle(rng)
+        waiting.clear()
+        hero?.let { waiting.add(it) }
+        waiting.addAll(rest)
+        if (heroFromBacklog && waiting.size > Dim.MAX_VISIBLE_QUEUE) {
+            val dropped = waiting.removeAt(waiting.size - 1)
+            backlog.add(0, dropped.color)
+        }
+        waiting.forEachIndexed { i, p ->
+            p.tx = Dim.QUEUE_X0 + i * Dim.QUEUE_GAP
+            p.popStart = ms
+        }
+        lastActionMs = ms
+        onFx(Fx.SHUFFLE)
+        return true
+    }
+
     // ------------------------------------------------------------ flow
 
     private fun startExit(car: CarEnt) {
         val slot = freeSlotIndex() ?: return
         car.slotIdx = slot
         car.phase = CarPhase.EXITING
+        arenaExits++
+        // chains shackled to this key car snap the moment it rolls out
+        var brokeAny = false
+        for (c in cars) {
+            if (c.spec.chainKey == car.spec.id && c.inArena) {
+                c.popStart = ms
+                brokeAny = true
+            }
+        }
+        if (brokeAny) onFx(Fx.CHAINBREAK)
         val slotCenter = slotCenters()[slot]
         val dir = facingVec(car.angle)
         val dist = exitDistance(car.pos, dir, Dim.arenaRect, car.hl + car.hw)
@@ -424,7 +544,7 @@ class GameEngine(
                 if (freeSlot == null) {
                     lose("No free parking slots!")
                 } else {
-                    val anyClear = cars.any { it.inArena && it.revealed && isClear(it) }
+                    val anyClear = cars.any { it.inArena && it.revealed && !isChainedActive(it) && isClear(it) }
                     if (!anyClear && cars.any { it.inArena }) {
                         lose("No car can move!")
                     }

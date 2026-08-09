@@ -490,3 +490,83 @@ private fun RestoreSaveDialog(prefs: Prefs, onClose: () -> Unit) {
         }
     }
 }
+
+// ---------------------------------------------------------------- boosters
+
+private data class BoostOffer(
+    val kind: GameIconKind,
+    val title: String,
+    val desc: String,
+    val count: Int,
+    val price: Int,
+)
+
+/** Booster shop: small coin-priced top-ups for the in-game booster belt. */
+@Composable
+fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
+    val offers = remember {
+        listOf(
+            BoostOffer(GameIconKind.HAMMER, "ICE HAMMER x1", "Shatters a frozen car in one blow.", 1, 250),
+            BoostOffer(GameIconKind.HAMMER, "ICE HAMMER x3", "Stock up for the deep ice levels.", 3, 650),
+            BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x1", "Reshuffles the line so the front one fits.", 1, 200),
+            BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x3", "A pocket full of second chances.", 3, 500),
+        )
+    }
+    DialogOverlay {
+        PanelCard(Modifier.padding(20.dp).width(340.dp)) {
+            DialogTitleText("BOOSTER BELT")
+            SpacerH(8.dp)
+            for (offer in offers) {
+                val afford = prefs.coins.intValue >= offer.price
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, RoundedCornerShape(16.dp))
+                        .border(2.dp, Color(0xFFE3B36B), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GameIcon(offer.kind, 34.dp)
+                    SpacerW(8.dp)
+                    androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                        BasicText(
+                            offer.title,
+                            style = TextStyle(color = Color(0xFF4A3826), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold),
+                        )
+                        BasicText(
+                            offer.desc,
+                            style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                    SpacerW(6.dp)
+                    SquishyButton(
+                        "${offer.price}",
+                        onClick = {
+                            if (prefs.coins.intValue >= offer.price) {
+                                prefs.addCoins(-offer.price)
+                                if (offer.kind == GameIconKind.HAMMER) prefs.addHammers(offer.count) else prefs.addShuffles(offer.count)
+                                CloudSave.sync(prefs, force = true)
+                            }
+                        },
+                        modifier = Modifier.width(84.dp),
+                        top = if (afford) Color(0xFFFFCF5C) else Color(0xFFC7BBA6),
+                        bottom = if (afford) Color(0xFFE09B13) else Color(0xFFA89B86),
+                        height = 36.dp,
+                        textSize = 13.dp,
+                        icon = { CoinIcon(16.dp) },
+                    )
+                }
+                SpacerH(8.dp)
+            }
+            SquishyButton(
+                "CLOSE",
+                onClick = onClose,
+                top = Color(0xFF9AA5B1),
+                bottom = Color(0xFF6E7883),
+                height = 44.dp,
+                textSize = 15.dp,
+            )
+            SpacerH(4.dp)
+        }
+    }
+}

@@ -139,6 +139,10 @@ data class LevelSpec(
     val slotCount: Int,
     val cars: List<CarSpec>,
     val queue: List<CarColor>,
+    /** Arena side barred by the exit gate (0=N 1=E 2=S 3=W), -1 = no gate. */
+    val gateSide: Int = -1,
+    /** Arena exits required to lift the gate. */
+    val gateNeed: Int = 0,
 ) {
     val totalPassengers: Int get() = queue.size
 }
@@ -153,4 +157,6 @@ data class CarSpec(
     val mystery: Boolean,
     /** >0 ⇒ frozen in ice: that many taps to crack before the car can move. */
     val frozen: Int = 0,
+    /** >=0 ⇒ chain-locked: immobile until the car with this id leaves the arena. */
+    val chainKey: Int = -1,
 )

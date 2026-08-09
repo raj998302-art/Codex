@@ -80,6 +80,7 @@ object Painters {
         drawSlotBand(theme, engine)
         drawRoad(theme)
         drawArena(theme)
+        drawGate(engine)
         drawStationSign(theme, engine.remainingPassengers())
         drawQueue(engine)
 
@@ -90,7 +91,7 @@ object Painters {
 
         // arena cars, painter's depth order
         val arenaCars = engine.cars.filter { it.phase == CarPhase.IN_ARENA }.sortedBy { it.spec.y }
-        for (car in arenaCars) drawCarEntity(car, ms)
+        for (car in arenaCars) drawCarEntity(car, ms, chained = engine.isChainedActive(car))
 
         // parked + moving cars with their seated passengers
         for (car in engine.cars) {
@@ -218,6 +219,79 @@ object Painters {
                 cornerRadius = CornerRadius(5f),
             )
             x += 110f
+        }
+    }
+
+    /**
+     * Exit gate: a hazard-striped barrier across one arena side with a counter
+     * badge showing how many arena exits still lift it. Fades to a ghost once
+     * open so the freed side reads instantly.
+     */
+    private fun DrawScope.drawGate(engine: GameEngine) {
+        val side = engine.spec.gateSide
+        if (side < 0) return
+        val open = engine.gateOpen()
+        val l = Dim.ARENA_LEFT
+        val t = Dim.ARENA_TOP
+        val r = Dim.ARENA_RIGHT
+        val b = Dim.ARENA_BOTTOM
+        val thick = 22f
+        val inset = 3f
+        // bar rect along the gated side
+        val tl: Offset
+        val sz: Size
+        val horizontal = side == 0 || side == 2
+        when (side) {
+            0 -> { tl = Offset(l + inset, t + inset); sz = Size(r - l - inset * 2, thick) }
+            2 -> { tl = Offset(l + inset, b - inset - thick); sz = Size(r - l - inset * 2, thick) }
+            1 -> { tl = Offset(r - inset - thick, t + inset); sz = Size(thick, b - t - inset * 2) }
+            else -> { tl = Offset(l + inset, t + inset); sz = Size(thick, b - t - inset * 2) }
+        }
+        val alphaMul = if (open) 0.16f else 1f
+        // hazard stripes clipped to the bar
+        drawRect(Color(0xFF2F3540).copy(alpha = 0.95f * alphaMul), tl, sz)
+        val stripe = 44f
+        val yellow = Color(0xFFFFC93C)
+        val across = (if (horizontal) sz.width else sz.height)
+        var x0 = 0f
+        var i = 0
+        while (x0 < across) {
+            if (i % 2 == 0) {
+                val segLen = minOf(stripe, across - x0)
+                if (horizontal) {
+                    drawRect(yellow.copy(alpha = alphaMul), Offset(tl.x + x0, tl.y), Size(segLen, sz.height))
+                } else {
+                    drawRect(yellow.copy(alpha = alphaMul), Offset(tl.x, tl.y + x0), Size(sz.width, segLen))
+                }
+            }
+            x0 += stripe
+            i++
+        }
+        // frame lines
+        if (horizontal) {
+            drawRect(Color(0xFF1D222C).copy(alpha = alphaMul), tl, Size(sz.width, 5f))
+            drawRect(Color(0xFF1D222C).copy(alpha = alphaMul), Offset(tl.x, tl.y + sz.height - 5f), Size(sz.width, 5f))
+        } else {
+            drawRect(Color(0xFF1D222C).copy(alpha = alphaMul), tl, Size(5f, sz.height))
+            drawRect(Color(0xFF1D222C).copy(alpha = alphaMul), Offset(tl.x + sz.width - 5f, tl.y), Size(5f, sz.height))
+        }
+        // counter badge at the bar middle, tucked just inside the arena so it
+        // never collides with the passenger queue band above
+        val mid = Offset(tl.x + sz.width / 2f, tl.y + sz.height / 2f)
+        val badgeC = when (side) {
+            0 -> Offset(mid.x, tl.y + sz.height + 46f)
+            2 -> Offset(mid.x, tl.y - 46f)
+            1 -> Offset(tl.x - 46f, mid.y)
+            else -> Offset(tl.x + sz.width + 46f, mid.y)
+        }
+        if (!open) {
+            drawCircle(Color(0xFF2F3540), radius = 40f, center = badgeC)
+            drawCircle(Color(0xFFFFC93C), radius = 34f, center = badgeC)
+            drawCircle(Color(0xFF2F3540), radius = 27f, center = badgeC)
+            outlinedText("${engine.gateRemaining()}", badgeC.x, badgeC.y, 38f, fill = Color.White, outline = Color(0xFF2B2B33))
+        } else {
+            drawCircle(Color(0xFF3DDC5F).copy(alpha = 0.9f), radius = 26f, center = badgeC)
+            outlinedText("OK", badgeC.x, badgeC.y, 24f, fill = Color.White, outline = Color(0xFF1B7A33))
         }
     }
 
@@ -481,7 +555,7 @@ object Painters {
 
     // ------------------------------------------------------------------ entities
 
-    private fun DrawScope.drawCarEntity(car: CarEnt, ms: Float) {
+    private fun DrawScope.drawCarEntity(car: CarEnt, ms: Float, chained: Boolean = false) {
         var angle = car.angle
         var scale = 1f
         val wobbleAge = ms - car.wobbleStart
@@ -495,6 +569,63 @@ object Painters {
         drawCar(car.x, car.y, angle, car.type, car.color, scale, mystery = !car.revealed, variant = car.spec.id)
         if (car.frozenLeft > 0) {
             drawIce(car.x, car.y, angle, car.type, scale, cracked = car.spec.frozen - car.frozenLeft)
+        }
+        if (chained) {
+            drawChains(car.x, car.y, angle, car.type, scale)
+        }
+    }
+
+    /**
+     * Iron chains strapped diagonally over a chain-locked car: two link runs
+     * corner-to-corner plus a chunky padlock in the middle. Only drawn while
+     * the key car still sits in the arena.
+     */
+    private fun DrawScope.drawChains(cx: Float, cy: Float, angleDeg: Float, type: CarType, scale: Float) {
+        val hl = type.len / 2f
+        val hw = type.wid / 2f
+        val iron = Color(0xFF3C4250)
+        val ironLight = Color(0xFF8A93A6)
+        withTransform({
+            translate(cx, cy)
+            rotate(angleDeg, Offset.Zero)
+            scale(scale, scale, Offset.Zero)
+        }) {
+            val diagonals = listOf(
+                Offset(-hw * 0.96f, -hl * 0.96f) to Offset(hw * 0.96f, hl * 0.96f),
+                Offset(hw * 0.96f, -hl * 0.96f) to Offset(-hw * 0.96f, hl * 0.96f),
+            )
+            for ((a, b) in diagonals) {
+                val dx = b.x - a.x
+                val dy = b.y - a.y
+                val len = kotlin.math.sqrt(dx * dx + dy * dy)
+                val linkDeg = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                val links = (len / 26f).toInt().coerceIn(5, 12)
+                for (i in 0..links) {
+                    val f = i / links.toFloat()
+                    val px = a.x + dx * f
+                    val py = a.y + dy * f
+                    val tilt = linkDeg + (if (i % 2 == 0) 32f else -32f)
+                    withTransform({
+                        translate(px, py)
+                        rotate(tilt, Offset.Zero)
+                    }) {
+                        drawRoundRect(iron, Offset(-13f, -8f), Size(26f, 16f), cornerRadius = CornerRadius(8f))
+                        drawRoundRect(ironLight, Offset(-9f, -5f), Size(18f, 6f), cornerRadius = CornerRadius(3f))
+                    }
+                }
+            }
+            // padlock
+            drawArc(
+                iron, startAngle = 180f, sweepAngle = 180f, useCenter = false,
+                topLeft = Offset(-16f, -34f), size = Size(32f, 34f), style = Stroke(9f),
+            )
+            drawRoundRect(iron, Offset(-22f, -16f), Size(44f, 36f), cornerRadius = CornerRadius(9f))
+            drawRoundRect(
+                Brush.verticalGradient(listOf(ironLight, iron), startY = -14f, endY = 18f),
+                Offset(-19f, -13f), Size(38f, 30f), cornerRadius = CornerRadius(7f),
+            )
+            drawCircle(Color(0xFFFFD93D), radius = 5.5f, center = Offset(0f, 0f))
+            drawRect(Color(0xFFFFD93D), Offset(-2.5f, 0f), Size(5f, 9f))
         }
     }
 

@@ -15,7 +15,7 @@ import kotlin.math.sin
 enum class GameIconKind {
     CART, GIFT, CALENDAR, TROPHY, GRAD_CAP, WIFI_OFF, SHIELD, LOCK, PLAY_AD,
     GEM, MEDAL_1, MEDAL_2, MEDAL_3, FIRE, CLOVER, PARKING, MYSTERY, BOLT, COIN_STACK, STAR,
-    GAMEPAD,
+    GAMEPAD, HAMMER, SHUFFLE,
 }
 
 /**
@@ -385,6 +385,80 @@ object Icons {
         outlineCircle(Offset(l + s * 0.61f, t + s * 0.50f), s * 0.040f, s * 0.020f, Color(0xFF3B9BFF))
     }
 
+    /** Ice-hammer booster: steel head with claw peen and a wooden handle. */
+    fun DrawScope.hammer(l: Float, t: Float, s: Float) {
+        val iron = Color(0xFF5B6B82)
+        val ironLight = Color(0xFFB9C6DA)
+        // claw peen (back of the head)
+        val claw = Path().apply {
+            moveTo(l + s * 0.20f, t + s * 0.24f)
+            lineTo(l + s * 0.10f, t + s * 0.34f)
+            lineTo(l + s * 0.20f, t + s * 0.40f)
+            lineTo(l + s * 0.30f, t + s * 0.34f)
+            close()
+        }
+        drawPath(claw, Color(0xFF2B2B33))
+        // head
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.18f, t + s * 0.22f), Size(s * 0.56f, s * 0.26f), borderRadiusFix(s * 0.07f))
+        drawRoundRect(
+            Brush.verticalGradient(listOf(ironLight, iron), startY = t + s * 0.24f, endY = t + s * 0.46f),
+            Offset(l + s * 0.21f, t + s * 0.25f), Size(s * 0.50f, s * 0.20f), borderRadiusFix(s * 0.05f),
+        )
+        // striking face
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.68f, t + s * 0.20f), Size(s * 0.14f, s * 0.30f), borderRadiusFix(s * 0.06f))
+        drawRoundRect(Color(0xFFD7E1EE), Offset(l + s * 0.70f, t + s * 0.23f), Size(s * 0.10f, s * 0.24f), borderRadiusFix(s * 0.04f))
+        // handle
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.42f, t + s * 0.44f), Size(s * 0.15f, s * 0.44f), borderRadiusFix(s * 0.06f))
+        drawRoundRect(
+            Brush.verticalGradient(listOf(Color(0xFFE0A26A), Color(0xFFA86A2E)), startY = t + s * 0.46f, endY = t + s * 0.86f),
+            Offset(l + s * 0.45f, t + s * 0.47f), Size(s * 0.09f, s * 0.38f), borderRadiusFix(s * 0.04f),
+        )
+        // ice chip sparkles
+        outlineCircle(Offset(l + s * 0.16f, t + s * 0.62f), s * 0.055f, s * 0.022f, Color(0xFF9ED9F5))
+        outlineCircle(Offset(l + s * 0.80f, t + s * 0.62f), s * 0.045f, s * 0.020f, Color(0xFF9ED9F5))
+    }
+
+    /** Queue-mix booster: two crossing arrows, heads on the far ends. */
+    fun DrawScope.shuffle(l: Float, t: Float, s: Float) {
+        val teal = Color(0xFF2ED3C6)
+        val tealDark = Color(0xFF0E9E94)
+        val w = s * 0.085f
+        // arrow 1: top-left to bottom-right
+        drawLine(Color(0xFF2B2B33), Offset(l + s * 0.18f, t + s * 0.32f), Offset(l + s * 0.74f, t + s * 0.66f), strokeWidth = w * 1.5f)
+        drawLine(tealDark, Offset(l + s * 0.18f, t + s * 0.32f), Offset(l + s * 0.74f, t + s * 0.66f), strokeWidth = w)
+        val h1 = Path().apply {
+            moveTo(l + s * 0.86f, t + s * 0.72f)
+            lineTo(l + s * 0.62f, t + s * 0.74f)
+            lineTo(l + s * 0.76f, t + s * 0.50f)
+            close()
+        }
+        drawPath(h1, Color(0xFF2B2B33))
+        val h1i = Path().apply {
+            moveTo(l + s * 0.82f, t + s * 0.70f)
+            lineTo(l + s * 0.66f, t + s * 0.72f)
+            lineTo(l + s * 0.75f, t + s * 0.56f)
+            close()
+        }
+        drawPath(h1i, teal)
+        // arrow 2: bottom-left to top-right
+        drawLine(Color(0xFF2B2B33), Offset(l + s * 0.18f, t + s * 0.68f), Offset(l + s * 0.66f, t + s * 0.28f), strokeWidth = w * 1.5f)
+        drawLine(tealDark, Offset(l + s * 0.18f, t + s * 0.68f), Offset(l + s * 0.66f, t + s * 0.28f), strokeWidth = w)
+        val h2 = Path().apply {
+            moveTo(l + s * 0.80f, t + s * 0.20f)
+            lineTo(l + s * 0.60f, t + s * 0.20f)
+            lineTo(l + s * 0.70f, t + s * 0.44f)
+            close()
+        }
+        drawPath(h2, Color(0xFF2B2B33))
+        val h2i = Path().apply {
+            moveTo(l + s * 0.77f, t + s * 0.23f)
+            lineTo(l + s * 0.64f, t + s * 0.23f)
+            lineTo(l + s * 0.70f, t + s * 0.40f)
+            close()
+        }
+        drawPath(h2i, tealDark)
+    }
+
     /** Routes an icon kind to its painter. */
     fun DrawScope.icon(kind: GameIconKind, l: Float, t: Float, s: Float) {
         when (kind) {
@@ -409,6 +483,8 @@ object Icons {
             GameIconKind.COIN_STACK -> coinStack(l, t, s)
             GameIconKind.STAR -> star(l + s / 2f, t + s / 2f, s * 0.5f, Color(0xFFFFD32E))
             GameIconKind.GAMEPAD -> gamepad(l, t, s)
+            GameIconKind.HAMMER -> hammer(l, t, s)
+            GameIconKind.SHUFFLE -> shuffle(l, t, s)
         }
     }
 }

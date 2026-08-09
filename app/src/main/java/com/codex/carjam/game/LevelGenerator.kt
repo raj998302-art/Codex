@@ -29,6 +29,7 @@ object LevelGenerator {
         var color: CarColor = CarColor.RED
         var mystery: Boolean = false
         var frozen: Int = 0
+        var chainKey: Int = -1
         val hl: Float get() = type.len / 2f
         val hw: Float get() = type.wid / 2f
         val center: Pt get() = Pt(x, y)
@@ -112,14 +113,59 @@ object LevelGenerator {
                 }
             }
 
+            // Chain-locked cars from level 11+: shackled to a "key" car — they
+            // cannot move until the key car leaves the arena. The key always
+            // sits earlier in the elimination order, so the level stays solvable.
+            // Chained cars are never mystery or frozen (one gimmick per car).
+            if (level >= 11) {
+                val usedPos = mutableSetOf<Int>()
+                val keyPos = mutableSetOf<Int>()
+                var want = if (rng.nextFloat() < min(0.14f + level * 0.006f, 0.5f)) 1 else 0
+                if (want > 0 && level >= 28 && rng.nextFloat() < 0.35f) want++
+                val minPos = max(4, (order.size * 0.35f).toInt())
+                var guard = 0
+                while (want > 0 && guard++ < 40) {
+                    if (order.size - minPos < 2) break
+                    val cPos = minPos + rng.nextInt(order.size - minPos)
+                    if (usedPos.contains(cPos) || keyPos.contains(cPos)) continue
+                    val cIdx = order[cPos]
+                    if (placed[cIdx].mystery || placed[cIdx].frozen > 0) continue
+                    val kPos = 1 + rng.nextInt(cPos - 1)
+                    if (usedPos.contains(kPos) || keyPos.contains(kPos)) continue
+                    placed[cIdx].chainKey = placed[order[kPos]].id
+                    usedPos.add(cPos)
+                    keyPos.add(kPos)
+                    want--
+                }
+            }
+
+            // Exit gate from level 14+: one arena side is barred until K cars
+            // exit. The gate sits on a side whose first use in the elimination
+            // order is exactly the K-th exit, so the known solution never
+            // violates it — a gate can only ever delay, never softlock.
+            var gateSide = -1
+            var gateNeed = 0
+            if (level >= 14 && rng.nextFloat() < min(0.10f + level * 0.005f, 0.30f)) {
+                val firstUse = IntArray(4) { Int.MAX_VALUE }
+                for ((pos, idx) in order.withIndex()) {
+                    val s = exitSide(facingVec(placed[idx].angle))
+                    if (firstUse[s] == Int.MAX_VALUE) firstUse[s] = pos
+                }
+                val candidates = (0..3).filter { firstUse[it] in 3 until order.size }
+                if (candidates.isNotEmpty()) {
+                    gateSide = candidates[rng.nextInt(candidates.size)]
+                    gateNeed = firstUse[gateSide]
+                }
+            }
+
             val cars = placed.map { p ->
                 CarSpec(
                     id = p.id, x = p.x, y = p.y, angleDeg = p.angle,
                     type = p.type, color = p.color, mystery = p.mystery,
-                    frozen = p.frozen,
+                    frozen = p.frozen, chainKey = p.chainKey,
                 )
             }
-            return LevelSpec(level, theme, style, slotCount, cars, queue)
+            return LevelSpec(level, theme, style, slotCount, cars, queue, gateSide = gateSide, gateNeed = gateNeed)
         }
 
         // Deterministic emergency fallback: sparse all-north grid, trivially solvable.

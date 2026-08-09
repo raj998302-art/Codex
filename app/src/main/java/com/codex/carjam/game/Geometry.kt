@@ -58,6 +58,10 @@ fun facingVec(angleDeg: Float): Pt {
     return Pt(sin(r).toFloat(), -cos(r).toFloat())
 }
 
+/** Dominant arena side a facing direction exits through: 0=N(top) 1=E 2=S(bottom) 3=W. */
+fun exitSide(dir: Pt): Int =
+    if (abs(dir.x) > abs(dir.y)) (if (dir.x > 0) 1 else 3) else (if (dir.y > 0) 2 else 0)
+
 /** The four corners of an oriented box centred at [c], half-length [hl] along its facing axis. */
 fun obbCorners(c: Pt, halfLen: Float, halfWid: Float, angleDeg: Float): List<Pt> {
     val f = facingVec(angleDeg)

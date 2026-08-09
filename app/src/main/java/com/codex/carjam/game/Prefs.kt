@@ -60,6 +60,84 @@ class Prefs(context: Context) {
     var referredBy = mutableStateOf<String?>(sp.getString(KEY_REFERRED, null))
         private set
 
+    /** Lifetime seated-passenger counter (drives missions + achievements). */
+    var boardsTotal = mutableIntStateOf(sp.getInt(KEY_BOARDS, 0))
+        private set
+
+    fun noteBoard() {
+        val v = boardsTotal.intValue + 1
+        boardsTotal.intValue = v
+        sp.edit().putInt(KEY_BOARDS, v).apply()
+    }
+
+    // ---------------------------------------------------------------- daily missions
+
+    /** Baselines snapshot for the current mission day (null = not initialised). */
+    data class MissionBars(
+        val day: Int,
+        val wins: Long,
+        val boards: Long,
+        val earned: Long,
+        val level: Long,
+        val claimed: Int,
+    )
+
+    var missionClaimed = mutableIntStateOf(sp.getInt(KEY_MSN_CLAIMED, 0))
+        private set
+
+    /** Rollover-safe: first read of a new day re-anchors all counters. */
+    fun ensureMissionDay(epochDay: Int): MissionBars {
+        if (sp.getInt(KEY_MSN_DAY, -1) != epochDay) {
+            missionClaimed.intValue = 0
+            sp.edit()
+                .putInt(KEY_MSN_DAY, epochDay)
+                .putLong(KEY_MSN_BASE_WINS, wins.intValue.toLong())
+                .putLong(KEY_MSN_BASE_BOARDS, boardsTotal.intValue.toLong())
+                .putLong(KEY_MSN_BASE_EARNED, totalCoinsEarned.intValue.toLong())
+                .putLong(KEY_MSN_BASE_LEVEL, maxLevel.intValue.toLong())
+                .putInt(KEY_MSN_CLAIMED, 0)
+                .apply()
+        }
+        return MissionBars(
+            day = epochDay,
+            wins = sp.getLong(KEY_MSN_BASE_WINS, wins.intValue.toLong()),
+            boards = sp.getLong(KEY_MSN_BASE_BOARDS, boardsTotal.intValue.toLong()),
+            earned = sp.getLong(KEY_MSN_BASE_EARNED, totalCoinsEarned.intValue.toLong()),
+            level = sp.getLong(KEY_MSN_BASE_LEVEL, maxLevel.intValue.toLong()),
+            claimed = missionClaimed.intValue,
+        )
+    }
+
+    fun setMissionClaimBit(index: Int) {
+        val v = missionClaimed.intValue or (1 shl index)
+        missionClaimed.intValue = v
+        sp.edit().putInt(KEY_MSN_CLAIMED, v).apply()
+    }
+
+    // ---------------------------------------------------------------- achievements
+
+    var achievementsClaimed = mutableStateOf<Set<String>>(
+        sp.getStringSet(KEY_ACHV, emptySet())?.toSet() ?: emptySet(),
+    )
+        private set
+
+    fun claimAchievement(id: String) {
+        if (achievementsClaimed.value.contains(id)) return
+        val v = achievementsClaimed.value + id
+        achievementsClaimed.value = v
+        sp.edit().putStringSet(KEY_ACHV, v).apply()
+    }
+
+    // ---------------------------------------------------------------- weekly season prize
+
+    var lastSeasonWeek = mutableIntStateOf(sp.getInt(KEY_SEASON_WEEK, 0))
+        private set
+
+    fun setLastSeasonWeek(weekId: Int) {
+        lastSeasonWeek.intValue = weekId
+        sp.edit().putInt(KEY_SEASON_WEEK, weekId).apply()
+    }
+
     /** Last day (epoch) the daily-event popup was auto-shown. */
     var eventSeenDay = mutableIntStateOf(sp.getInt(KEY_EVENT_DAY, -1))
         private set
@@ -373,6 +451,15 @@ class Prefs(context: Context) {
         private const val KEY_EVENT_DAY = "event_seen_day"
         private const val KEY_WELCOMED = "welcomed"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_BOARDS = "boards_total"
+        private const val KEY_MSN_DAY = "mission_day"
+        private const val KEY_MSN_BASE_WINS = "mission_base_wins"
+        private const val KEY_MSN_BASE_BOARDS = "mission_base_boards"
+        private const val KEY_MSN_BASE_EARNED = "mission_base_earned"
+        private const val KEY_MSN_BASE_LEVEL = "mission_base_level"
+        private const val KEY_MSN_CLAIMED = "mission_claimed"
+        private const val KEY_ACHV = "achievements_claimed"
+        private const val KEY_SEASON_WEEK = "season_week"
         private const val KEY_SYNC_KEY = "sync_key"
         private const val KEY_CLOUD_MS = "last_cloud_sync_ms"
         private const val KEY_TAMPER = "tamper_flags"

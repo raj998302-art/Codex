@@ -68,6 +68,20 @@ const saveSchema = new mongoose.Schema(
 );
 const Save = mongoose.model('Save', saveSchema);
 
+/* Per-week rating rows (frozen once the week ends — nothing mutates old weeks). */
+const weeklySchema = new mongoose.Schema(
+  {
+    wkKey: { type: String, required: true, unique: true, index: true }, // `${weekId}#${deviceId}`
+    weekId: { type: Number, required: true, index: true },
+    deviceId: { type: String, required: true },
+    name: { type: String, default: 'Racer' },
+    avatarId: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+const WeeklyRating = mongoose.model('WeeklyRating', weeklySchema);
+
 // ---------------------------------------------------------------- helpers
 
 const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.floor(Number(v) || 0)));
@@ -90,6 +104,16 @@ const publicEntry = (p, rank) => ({
   maxLevel: p.maxLevel,
   deviceId: p.deviceId,
 });
+
+/* ISO-8601 week id (server-local = UTC on Render): year * 100 + week number. */
+function serverWeekId(now = new Date()) {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() * 100 + week;
+}
 
 /**
  * Anti-abuse wallet clamp: gains are capped to per-hour rates (+slack) measured
@@ -141,8 +165,37 @@ app.post('/api/score', async (req, res) => {
     };
     const rating = ratingOf(p);
     await Player.updateOne({ deviceId }, { $set: { ...p, rating } }, { upsert: true });
+    // also roll into the current week's season board
+    const weekId = serverWeekId();
+    await WeeklyRating.updateOne(
+      { wkKey: `${weekId}#${deviceId}` },
+      { $set: { weekId, deviceId, name: p.name, avatarId: p.avatarId, rating } },
+      { upsert: true },
+    );
     const rank = (await Player.countDocuments({ rating: { $gt: rating } })) + 1;
     res.json({ ok: true, rating, rank });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'server error' });
+  }
+});
+
+/*
+ * Finished-season summary for the caller: the most recent CLOSED week they
+ * raced in, and their final rank there. The client pays the weekly prize once
+ * per weekId (stored locally) — no cron needed on free hosting.
+ */
+app.get('/api/lastweek', async (req, res) => {
+  try {
+    const deviceId = String(req.query.deviceId ?? '');
+    if (deviceId.length < 8) return res.status(400).json({ ok: false, error: 'bad deviceId' });
+    const cur = serverWeekId();
+    const past = await WeeklyRating.distinct('weekId', { weekId: { $lt: cur } });
+    const prevWeek = past.sort((a, b) => b - a)[0];
+    if (prevWeek == null) return res.json({ ok: true, weekId: null, rank: null });
+    const mine = await WeeklyRating.findOne({ weekId: prevWeek, deviceId }).lean();
+    if (!mine) return res.json({ ok: true, weekId: prevWeek, rank: null });
+    const rank = (await WeeklyRating.countDocuments({ weekId: prevWeek, rating: { $gt: mine.rating } })) + 1;
+    res.json({ ok: true, weekId: prevWeek, rank, rating: mine.rating });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'server error' });
   }

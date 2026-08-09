@@ -71,7 +71,10 @@ fun GameScreen(
                 }
 
                 Fx.WHOOSH -> sound.whoosh()
-                Fx.BOARD -> sound.board()
+                Fx.BOARD -> {
+                    sound.board()
+                    if (!practice) prefs.noteBoard()
+                }
                 Fx.COIN -> sound.coin()
                 Fx.DEPART -> sound.depart()
                 Fx.REVEAL -> sound.reveal()

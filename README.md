@@ -162,6 +162,16 @@ player's own saved stats (still zero demo bots).
 | **Payments simplified** | Razorpay experiment removed — everything goes through Google Play Billing (policy-safe) |
 | **Assets** | Splash art re-encoded at 1296-wide q90, hero car re-exported at 1200px transparent — retina-crisp, bigger APK allowed |
 
+## v2.5 (quests + seasons)
+
+| System | What changed |
+| --- | --- |
+| **Daily missions** | New QUESTS home chip: 3 seeded missions every day (wins / passengers seated / coins collected / new levels) with progress bars and claimable coin+gem rewards; practice mode never counts |
+| **Achievements** | AWARDS tab: 12 lifetime milestones (first win → level 100, 50k coins earned, 500 passengers, 7-day streak) with one-time payouts and OWNED state |
+| **Weekly season prizes (auto-credit)** | Backend now freezes a per-week rating board; the first sync after a season ends auto-credits your rank prize (up to 500 coins + 25 gems) with a SEASON PRIZE celebration dialog |
+| **Daily-reward hardening** | Claims are idempotent — double-taps, re-fires and replays can never double-grant; badge state is fully reactive |
+| **Live counters** | New lifetime passengers-seated counter feeds both missions and achievements (practice excluded) |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

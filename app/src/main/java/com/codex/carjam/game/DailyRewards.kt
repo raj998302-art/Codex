@@ -21,8 +21,11 @@ object DailyRewards {
         }
     }
 
-    /** Grants today's prize (coins + day-specific gems), returns the coin amount. */
+    /** Grants today's prize (coins + day-specific gems), returns the coin amount.
+     *  Idempotent: a second call on the same day (double-tap, recomposition
+     *  re-fire, any UI glitch) grants 0 — never a duplicate prize. */
     fun claim(prefs: Prefs): Int {
+        if (!canClaim(prefs)) return 0
         val day = nextDay(prefs)
         val prize = prizes[(day - 1).coerceIn(0, prizes.size - 1)]
         prefs.addCoins(prize)

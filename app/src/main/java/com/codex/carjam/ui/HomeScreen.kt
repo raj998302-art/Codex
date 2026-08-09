@@ -52,10 +52,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codex.carjam.game.CarColor
 import com.codex.carjam.game.CarType
+import com.codex.carjam.game.Achievements
 import com.codex.carjam.game.CloudSave
+import com.codex.carjam.game.DailyMissions
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.LevelTheme
+import com.codex.carjam.game.LeaderboardApi
 import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
@@ -89,7 +92,9 @@ fun HomeScreen(
     var showEvents by remember { mutableStateOf(false) }
     var showRank by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
+    var showQuests by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(!prefs.welcomed.value) }
+    var seasonPrize by remember { mutableStateOf<SeasonPrize?>(null) }
     val theme = LevelTheme.entries[(prefs.maxLevel.intValue - 1) % LevelTheme.entries.size]
     val event = remember { Events.today() }
     val dailyReady = DailyRewards.canClaim(prefs)
@@ -99,6 +104,17 @@ fun HomeScreen(
             activity?.let { pgs.silentCheck(it) }
             LiveBoard.sync(prefs)
             CloudSave.sync(prefs)
+            // weekly season prize: auto-credit once per finished season
+            LeaderboardApi.fetchLastWeek(prefs.deviceId) { weekId, rank, _ ->
+                if (weekId != null && rank != null && weekId > prefs.lastSeasonWeek.intValue) {
+                    val (coins, gems) = seasonPrizeForRank(rank)
+                    prefs.addCoins(coins)
+                    if (gems > 0) prefs.addGems(gems)
+                    prefs.setLastSeasonWeek(weekId)
+                    CloudSave.sync(prefs, force = true)
+                    seasonPrize = SeasonPrize(weekId, rank, coins, gems)
+                }
+            }
         }
     }
     // live-ops popup: pitch today's event once per day (after onboarding)
@@ -237,7 +253,9 @@ fun HomeScreen(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
+                val questBadge = DailyMissions.anyClaimable(prefs) || Achievements.anyClaimable(prefs)
                 ActionChip(GameIconKind.CART, "SHOP") { sound.tap(); showShop = true }
+                ActionChip(GameIconKind.BOLT, "QUESTS", badge = questBadge) { sound.tap(); showQuests = true }
                 ActionChip(GameIconKind.GIFT, "GIFT", badge = dailyReady) { sound.tap(); showDaily = true }
                 ActionChip(GameIconKind.CALENDAR, "EVENTS") { sound.tap(); showEvents = true }
                 ActionChip(GameIconKind.TROPHY, "RANK") { sound.tap(); showRank = true }
@@ -298,6 +316,9 @@ fun HomeScreen(
         }
 
         // ---- dialogs
+        seasonPrize?.let { prize ->
+            SeasonPrizeDialog(prize = prize, onClose = { seasonPrize = null })
+        }
         if (showWelcome) {
             WelcomeDialog(
                 onContinuePlay = {
@@ -337,6 +358,13 @@ fun HomeScreen(
                     onClose = { showShop = false },
                 )
             } ?: run { showShop = false }
+        }
+        if (showQuests) {
+            QuestsDialog(
+                prefs = prefs,
+                onClaimed = { sound.coin(); CloudSave.sync(prefs, force = true) },
+                onClose = { showQuests = false },
+            )
         }
         if (showDaily) {
             DailyRewardDialog(

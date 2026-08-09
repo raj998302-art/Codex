@@ -584,6 +584,6 @@ fun DailyRewardDialog(prefs: Prefs, onClaimed: (Int) -> Unit, onClose: () -> Uni
 // ---------------------------------------------------------------------- shared
 
 @Composable
-private fun DialogTitleText(text: String) {
+fun DialogTitleText(text: String) {
     OutlinedTextC(text = text, size = 30.dp, fill = Color.White, outline = Color(0xFF7A4A12))
 }

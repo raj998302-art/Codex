@@ -125,6 +125,24 @@ object LeaderboardApi {
         }
     }
 
+    /** Summary of the most recent CLOSED season this device raced in (for weekly prizes). */
+    fun fetchLastWeek(deviceId: String, cb: (weekId: Int?, rank: Int?, rating: Int) -> Unit) {
+        val q = try {
+            URLEncoder.encode(deviceId, "UTF-8")
+        } catch (_: Throwable) {
+            ""
+        }
+        request("GET", "/api/lastweek?deviceId=$q", null) { j ->
+            if (j == null || !j.optBoolean("ok")) {
+                cb(null, null, 0)
+                return@request
+            }
+            val week = if (j.isNull("weekId")) null else j.optInt("weekId")
+            val rank = if (j.isNull("rank")) null else j.optInt("rank")
+            cb(week, rank, j.optInt("rating", 0))
+        }
+    }
+
     private fun entry(j: JSONObject) = Entry(
         rank = j.optInt("rank"),
         name = j.optString("name", "Racer"),

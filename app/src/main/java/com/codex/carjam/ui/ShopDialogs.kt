@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,13 +36,13 @@ import androidx.compose.ui.unit.sp
 import com.codex.carjam.R
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
-import com.codex.carjam.game.Leaderboard
+import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
-import com.codex.carjam.monetize.RazorpayManager
 import java.util.Calendar
+import kotlinx.coroutines.delay
 
 private val Dark = Color(0xFF4A3826)
 private val Muted = Color(0xFF8C6A3F)
@@ -66,7 +67,6 @@ fun ShopDialog(
     billing: BillingManager,
     ads: AdsManager,
     prefs: Prefs,
-    razorpay: RazorpayManager,
     activity: Activity,
     onClose: () -> Unit,
 ) {
@@ -237,56 +237,6 @@ fun ShopDialog(
                         .clickable { billing.restorePurchases() }
                         .padding(vertical = 6.dp),
                 )
-
-                // ---- UPI / cards via Razorpay (direct-distribution builds only;
-                //      Play-Store builds keep Google Play Billing above — policy)
-                if (razorpay.enabled) {
-                    SpacerH(10.dp)
-                    BasicText(
-                        "UPI / CARDS — RAZORPAY",
-                        style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp),
-                    )
-                    SpacerH(8.dp)
-                    for (p in RazorpayManager.PRICES_INR.entries) {
-                        val owned = p.key == BillingManager.PRODUCT_NO_ADS && prefs.removeAds.value
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            BasicText(
-                                RazorpayManager.LABELS[p.key] ?: p.key,
-                                style = TextStyle(color = Dark, fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (owned) {
-                                BasicText(
-                                    "OWNED",
-                                    style = TextStyle(color = Color(0xFF2FA84F), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
-                                )
-                            } else {
-                                SquishyButton(
-                                    "₹${p.value}",
-                                    onClick = { razorpay.buy(activity, p.key) },
-                                    modifier = Modifier.width(92.dp),
-                                    top = Color(0xFF2DD4BF),
-                                    bottom = Color(0xFF0D9488),
-                                    height = 34.dp,
-                                    textSize = 13.dp,
-                                )
-                            }
-                        }
-                    }
-                    razorpay.status.value?.let { msg ->
-                        SpacerH(6.dp)
-                        BasicText(
-                            msg,
-                            style = TextStyle(color = Muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
             }
             SpacerH(8.dp)
             SquishyButton("CLOSE", onClick = onClose, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 46.dp, textSize = 15.dp)
@@ -349,16 +299,44 @@ fun EventsDialog(onClose: () -> Unit) {
 
 @Composable
 fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
-    val (board, yourRank) = Leaderboard.weeklyBoard(Events.weekId(), prefs.rating(), prefs.playerName)
+    // first paint: force a fresh sync; then keep it real-time while the dialog is open
+    LaunchedEffect(Unit) {
+        LiveBoard.sync(prefs, force = true)
+        while (true) {
+            delay(20_000)
+            LiveBoard.sync(prefs)
+        }
+    }
+    val live = LiveBoard.live.value
+    val entries = LiveBoard.entries.value
+    val me = LiveBoard.me.value
+    val myId = prefs.deviceId
+
     DialogOverlay {
         PanelCard(Modifier.width(350.dp)) {
-            DialogTitleText("WEEKLY RANK")
+            DialogTitleText("TOP RACERS")
             SpacerH(6.dp)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GameIcon(GameIconKind.TROPHY, 28.dp)
+                // live/offline status dot
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .background(
+                            when (live) {
+                                true -> Color(0xFF3DDC5F)
+                                false -> Color(0xFFC2B49A)
+                                null -> Color(0xFFFFC93C)
+                            },
+                            CircleShape,
+                        ),
+                )
                 SpacerW(8.dp)
                 BasicText(
-                    "You are #$yourRank  •  ends in ${formatDH(Events.msUntilNextWeek())}",
+                    when (live) {
+                        true -> if (me != null) "LIVE  •  you are #${me.rank}" else "LIVE  •  real players, real ratings"
+                        false -> "OFFLINE  •  ranks sync when the server connects"
+                        null -> "CONNECTING…"
+                    },
                     style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
                 )
             }
@@ -366,62 +344,141 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .height(330.dp)
+                    .height(340.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                for (e in board) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp)
-                            .background(
-                                if (e.isYou) Color(0xFFFFF0C2) else if (e.rank <= 3) Color(0xFFFFFFFF) else Color(0x00FFFFFF),
-                                RoundedCornerShape(12.dp),
+                when {
+                    live == true && entries.isEmpty() -> {
+                        BasicText(
+                            "The board is fresh — win a level and be the FIRST racer on it!",
+                            style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                        )
+                    }
+
+                    live == true -> {
+                        for (e in entries) {
+                            RankRow(
+                                rank = e.rank,
+                                avatarId = e.avatarId,
+                                name = e.name,
+                                level = e.maxLevel,
+                                rating = e.rating,
+                                isYou = e.deviceId == myId,
                             )
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.width(42.dp), contentAlignment = Alignment.CenterStart) {
-                            when (e.rank) {
-                                1 -> GameIcon(GameIconKind.MEDAL_1, 30.dp)
-                                2 -> GameIcon(GameIconKind.MEDAL_2, 30.dp)
-                                3 -> GameIcon(GameIconKind.MEDAL_3, 30.dp)
-                                else -> BasicText(
-                                    "#${e.rank}",
-                                    style = TextStyle(color = if (e.isYou) Dark else Muted, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
-                                )
-                            }
                         }
-                        BasicText(
-                            e.name,
-                            style = TextStyle(color = Dark, fontSize = 15.sp, fontWeight = if (e.isYou) FontWeight.ExtraBold else FontWeight.SemiBold),
-                            modifier = Modifier.weight(1f),
-                        )
-                        BasicText(
-                            "${e.score}",
-                            style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                        )
+                        // pinned "you" row when outside the top 100
+                        if (me != null && entries.none { it.deviceId == myId }) {
+                            SpacerH(6.dp)
+                            RankRow(
+                                rank = me.rank,
+                                avatarId = me.avatarId,
+                                name = me.name,
+                                level = me.maxLevel,
+                                rating = me.rating,
+                                isYou = true,
+                            )
+                        }
+                    }
+
+                    else -> {
+                        // offline / server not deployed yet: honest local card, no fake bots
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 18.dp)
+                                .background(Color.White, RoundedCornerShape(16.dp))
+                                .border(2.dp, Color(0xFFE3B36B), RoundedCornerShape(16.dp))
+                                .padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AvatarIcon(prefs.avatarId.intValue, 40.dp)
+                                SpacerW(10.dp)
+                                Column {
+                                    BasicText(
+                                        prefs.playerName,
+                                        style = TextStyle(color = Dark, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold),
+                                    )
+                                    BasicText(
+                                        "Level ${prefs.maxLevel.intValue}  •  rating ${prefs.rating()}",
+                                        style = TextStyle(color = Muted, fontSize = 12.5.sp, fontWeight = FontWeight.Bold),
+                                    )
+                                }
+                            }
+                            SpacerH(10.dp)
+                            BasicText(
+                                if (com.codex.carjam.game.LeaderboardApi.CONFIGURED) {
+                                    "Couldn't reach the leaderboard server — check your internet and tap REFRESH."
+                                } else {
+                                    "Your stats are saved on this device. Once the leaderboard server is live (see README), real players race you here in real time."
+                                },
+                                style = TextStyle(color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center),
+                            )
+                        }
                     }
                 }
             }
-            SpacerH(8.dp)
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                BasicText("Top 3 this week win  ", style = TextStyle(color = Muted, fontSize = 12.sp))
-                CoinIcon(16.dp)
-                BasicText("500 / ", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
-                CoinIcon(16.dp)
-                BasicText("250 / ", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
-                CoinIcon(16.dp)
-                BasicText("150", style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+            SpacerH(10.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SquishyButton(
+                    "REFRESH",
+                    onClick = { LiveBoard.sync(prefs, force = true) },
+                    modifier = Modifier.weight(1f),
+                    top = Color(0xFF6FB6FF),
+                    bottom = Color(0xFF3B7FE0),
+                    height = 46.dp,
+                    textSize = 14.dp,
+                )
+                SquishyButton("CLOSE", onClick = onClose, modifier = Modifier.weight(1f), height = 46.dp, textSize = 14.dp)
             }
-            SpacerH(8.dp)
-            SquishyButton("CLOSE", onClick = onClose, height = 46.dp, textSize = 15.dp)
             SpacerH(4.dp)
         }
+    }
+}
+
+@Composable
+private fun RankRow(rank: Int, avatarId: Int, name: String, level: Int, rating: Int, isYou: Boolean) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .background(
+                if (isYou) Color(0xFFFFF0C2) else if (rank <= 3) Color(0xFFFFFFFF) else Color(0x00FFFFFF),
+                RoundedCornerShape(12.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(42.dp), contentAlignment = Alignment.CenterStart) {
+            when (rank) {
+                1 -> GameIcon(GameIconKind.MEDAL_1, 30.dp)
+                2 -> GameIcon(GameIconKind.MEDAL_2, 30.dp)
+                3 -> GameIcon(GameIconKind.MEDAL_3, 30.dp)
+                else -> BasicText(
+                    "#$rank",
+                    style = TextStyle(color = if (isYou) Dark else Muted, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                )
+            }
+        }
+        AvatarIcon(avatarId, 30.dp)
+        SpacerW(8.dp)
+        Column(Modifier.weight(1f)) {
+            BasicText(
+                if (isYou) "$name (YOU)" else name,
+                style = TextStyle(color = Dark, fontSize = 14.5.sp, fontWeight = if (isYou) FontWeight.ExtraBold else FontWeight.SemiBold),
+            )
+            BasicText(
+                "LV $level",
+                style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+            )
+        }
+        BasicText(
+            "$rating",
+            style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+        )
     }
 }
 

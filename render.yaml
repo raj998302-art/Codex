@@ -1,0 +1,16 @@
+# One-click Blueprint for Render (https://render.com) — deploys the leaderboard API.
+# After connecting the repo, set MONGODB_URI in the service's Environment tab
+# (your Atlas connection string — keep it OUT of git). Atlas → Network Access
+# must allow 0.0.0.0/0 because Render free instances use dynamic IPs.
+services:
+  - type: web
+    name: carjam-leaderboard
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: MONGODB_URI
+        sync: false

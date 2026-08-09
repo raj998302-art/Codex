@@ -16,7 +16,6 @@ import com.codex.carjam.game.SoundManager
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
 import com.codex.carjam.monetize.PlayGamesManager
-import com.codex.carjam.monetize.RazorpayManager
 
 private sealed interface Screen {
     data object Splash : Screen
@@ -34,20 +33,16 @@ fun CarJamApp() {
     val billing = remember { BillingManager(context, prefs) }
     val ads = remember { AdsManager(context, prefs) }
     val pgs = remember { PlayGamesManager(context) }
-    val razorpay = remember { RazorpayManager(context, prefs) }
     var online by remember { mutableStateOf(Net.isOnline(context)) }
 
     LaunchedEffect(Unit) {
         ads.initialize()
         pgs.initialize()
-        razorpay.preload()
-        RazorpayManager.active = razorpay
     }
     DisposableEffect(Unit) {
         onDispose {
             sound.release()
             billing.release()
-            if (RazorpayManager.active === razorpay) RazorpayManager.active = null
         }
     }
 
@@ -84,7 +79,6 @@ fun CarJamApp() {
             ads = ads,
             billing = billing,
             pgs = pgs,
-            razorpay = razorpay,
             online = online,
             onPlay = { lvl -> screen = Screen.Game(lvl, attempt = 0, practice = false) },
             onPractice = { screen = Screen.Game(prefs.maxLevel.intValue, attempt = 0, practice = true) },
@@ -99,7 +93,6 @@ fun CarJamApp() {
             sound = sound,
             ads = ads,
             billing = billing,
-            razorpay = razorpay,
             onHome = { screen = Screen.Home },
             onNext = { screen = Screen.Game(s.level + 1, attempt = 0, practice = s.practice) },
             onRetry = { screen = Screen.Game(s.level, attempt = s.attempt + 1, practice = s.practice) },

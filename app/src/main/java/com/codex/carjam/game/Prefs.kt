@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import java.util.UUID
 
 /**
  * SharedPreferences-backed progress wallet; Compose-observable.
@@ -67,6 +68,10 @@ class Prefs(context: Context) {
         private set
 
     val myReferralCode: String get() = Referral.myCode(installSalt)
+
+    /** Stable anonymous install id — only used to claim this player's leaderboard slot. */
+    val deviceId: String = sp.getString(KEY_DEVICE_ID, null)
+        ?: UUID.randomUUID().toString().also { sp.edit().putString(KEY_DEVICE_ID, it).apply() }
 
     /** Leaderboard rating: level progress dominates, small coin/streak flavour on top. */
     fun rating(): Int = maxLevel.intValue * 120 + totalCoinsEarned.intValue / 5 + dailyStreak.intValue * 10
@@ -256,6 +261,7 @@ class Prefs(context: Context) {
         private const val KEY_GEMS_B = "gems.b"
         private const val KEY_EVENT_DAY = "event_seen_day"
         private const val KEY_WELCOMED = "welcomed"
+        private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_TAMPER = "tamper_flags"
     }
 }

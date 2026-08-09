@@ -1,49 +1,45 @@
 package com.codex.carjam.game
 
-import kotlin.random.Random
+import androidx.compose.runtime.mutableStateOf
 
 /**
- * Weekly leaderboard. Fully offline: a fresh field of 49 rivals is generated every
- * week (seeded by the week id) and the player climbs it with their [Prefs.rating].
- * Swap [weeklyBoard] for Play Games Services calls later without touching the UI.
+ * Real-time leaderboard state, fed by the Render+MongoDB backend through
+ * [LeaderboardApi]. No demo data anywhere: the list is exactly what the server
+ * answers. [live] is null while the first sync is in flight, true when the
+ * server answered, false when offline / server unreachable / not yet deployed.
+ * A sync = push our score, then pull the top — cheap, effective and safe to
+ * call liberally (calls are de-bounced to once per 15 s unless forced).
  */
-object Leaderboard {
+object LiveBoard {
 
-    private val names = listOf(
-        "Aarav", "Vivaan", "Diya", "Arjun", "Ananya", "Kabir", "Ishaan", "Myra",
-        "Sai", "Rudra", "Navya", "Aryan", "Kiara", "Reyansh", "Anika", "Advait",
-        "Sara", "Dhruv", "Prisha", "Yash", "Meera", "Rohan", "Zara", "Veer",
-        "Ira", "Ayaan", "Nora", "Dev", "Tara", "Arnav", "Ivy", "Ria", "Om",
-        "Aisha", "Parth", "Mahi", "Laksh", "Nyra", "Zian", "Freya", "Ritvik",
-        "Aadhya", "Krish", "Eva", "Shaurya", "Jiya", "Manav", "Saanvi", "Tejas",
-        "Ahana", "Viaan", "Pari", "Neel", "Rhea",
-    )
+    val entries = mutableStateOf<List<LeaderboardApi.Entry>>(emptyList())
+    val me = mutableStateOf<LeaderboardApi.Entry?>(null)
+    val live = mutableStateOf<Boolean?>(null)
 
-    data class Entry(val rank: Int, val name: String, val score: Int, val isYou: Boolean)
+    private var lastFetchMs = 0L
+    private var fetching = false
 
-    /** Sorted board + the player's 1-based rank. */
-    fun weeklyBoard(weekId: Int, youScore: Int, youName: String = "You"): Pair<List<Entry>, Int> {
-        val rng = Random(weekId * 2654435761L + 17)
-        // Rival scores spread around a wide band so any player level feels competitive.
-        val cap = maxOf(900, (youScore * 1.35f).toInt() + 700)
-        val rivals = names.shuffled(rng).take(49).map { n ->
-            n to (rng.nextInt(150, cap) + rng.nextInt(0, 300))
-        }.toMutableList()
-        rivals.add(youName to youScore)
-        val sorted = rivals.sortedByDescending { it.second }
-        val board = sorted.mapIndexed { i, e ->
-            Entry(rank = i + 1, name = e.first, score = e.second, isYou = e.first == youName)
+    fun sync(prefs: Prefs, force: Boolean = false) {
+        if (!LeaderboardApi.CONFIGURED) {
+            live.value = false
+            return
         }
-        val yourRank = board.first { it.isYou }.rank
-        return board to yourRank
-    }
-
-    /** Coin prize by final weekly rank, paid out when the week flips (flavour for now). */
-    fun prizeForRank(rank: Int): Int = when {
-        rank == 1 -> 500
-        rank <= 3 -> 250
-        rank <= 10 -> 100
-        rank <= 25 -> 40
-        else -> 10
+        if (fetching) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastFetchMs < 15_000L) return
+        fetching = true
+        lastFetchMs = now
+        LeaderboardApi.pushScore(prefs) { pushed ->
+            LeaderboardApi.fetchTop(prefs.deviceId) { top, mine ->
+                fetching = false
+                if (top != null) {
+                    entries.value = top
+                    me.value = mine
+                    live.value = true
+                } else {
+                    live.value = if (pushed) live.value else false
+                }
+            }
+        }
     }
 }

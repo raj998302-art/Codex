@@ -68,13 +68,39 @@ sources without touching the UI.
    The game then shows the official account picker at first launch, silent-signs
    every session, and syncs the gamer name into PROFILE. Until then it no-ops
    gracefully — nothing breaks.
-4. **Razorpay (optional — direct-distribution builds only!)** — Google Play policy
-   *requires* Play Billing for digital goods inside Play-Store builds, so Razorpay
-   (`UPI / cards / netbanking`) is compiled in but switched OFF. For a website/side-load
-   APK you can enable it: put your Key ID in `RazorpayManager.KEY_ID`, set
-   `ENABLED = true`, and the SHOP grows a "UPI / CARDS — RAZORPAY" section that mirrors
-   the same packs. For production, verify payment signatures on a small backend.
+4. **Payments = Google Play Billing only.** All packs route through
+   `BillingManager` — the Play-policy-compliant path for digital goods.
 5. Replace the debug signing config in `app/build.gradle.kts` with your keystore.
+
+## Real-time leaderboard backend (MongoDB Atlas + Render)
+
+The leaderboard is a live, no-demo-data global board backed by MongoDB. The app
+**never** talks to Mongo directly — an APK can be decompiled, so the connection
+string would leak and anyone could wipe your database. Instead a tiny Node
+service (in `backend/`) holds the credentials and exposes two HTTPS endpoints
+(`POST /api/score`, `GET /api/leaderboard`). Ratings are re-computed and clamped
+server-side from the raw components (level/coins/streak), so a tampered client
+cannot post a fake score.
+
+Deploy once (≈5 minutes, free):
+
+1. **MongoDB Atlas** — your cluster already exists. In Atlas → **Network Access**,
+   allow `0.0.0.0/0` (Render free instances use dynamic outbound IPs). Keep the DB
+   user password private — if it was ever shared anywhere, rotate it in Atlas →
+   **Database Access** first.
+2. **Render** — render.com → sign in with GitHub → **New → Blueprint** → pick this
+   repo (it reads `render.yaml` and sets everything up). When it asks, paste your
+   MongoDB connection string as `MONGODB_URI` (`mongodb+srv://…/carjam`). One minute
+   later the service is live at `https://<service-name>.onrender.com` (check
+   `/healthz` → `{ "ok": true }`).
+3. **Wire the app** — paste that URL into `LeaderboardApi.BASE_URL`
+   (`app/src/main/java/com/codex/carjam/game/LeaderboardApi.kt`), commit, push —
+   CI ships a new APK and the RANK screen goes live worldwide.
+
+Notes: free Render instances sleep when idle — the first leaderboard sync after a
+quiet hour takes ~20 s while it wakes; every sync after that is instant. When the
+service or network is unreachable the dialog shows an honest OFFLINE card with the
+player's own saved stats (still zero demo bots).
 
 
 ## v2.1 polish (AAA feedback pass)
@@ -99,6 +125,16 @@ sources without touching the UI.
 | **Play Games plumbing** | `games_app_id` string resource + manifest meta-data wired — paste your PGS project number and sign-in goes live |
 | **Razorpay module** | `RazorpayManager` (Checkout 1.6.41, pinned core) with UPI/cards checkout, pack mirror + reward crediting; disabled by default for Play-Store policy compliance |
 | **Polish** | Sonar pulse ring on PLAY, level-complete showroom strip, v2.2/versionCode 3 |
+
+## v2.3 (MongoDB real-time leaderboard)
+
+| System | What changed |
+| --- | --- |
+| **Real-time leaderboard** | Demo bots deleted. The RANK screen is now a live global board: avatar + level + server-verified rating per player, medals 1-3, pinned "YOU" row, LIVE/OFFLINE badge, auto-refresh every 20 s while open |
+| **Secure sync** | Score is pushed on every win + app open; the server recomputes the rating from components (same formula as `Prefs.rating()`) with hard clamps — fake scores can't exist server-side |
+| **Backend in-repo** | `backend/` = Node + Express + Mongoose service, one-click `render.yaml` Blueprint; the MongoDB URI lives only in Render env vars, never in git or the APK |
+| **Payments simplified** | Razorpay experiment removed — everything goes through Google Play Billing (policy-safe) |
+| **Assets** | Splash art re-encoded at 1296-wide q90, hero car re-exported at 1200px transparent — retina-crisp, bigger APK allowed |
 
 ## Project layout
 

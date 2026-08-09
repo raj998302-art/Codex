@@ -55,6 +55,7 @@ import com.codex.carjam.game.CarType
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.LevelTheme
+import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.GameIconKind
@@ -62,7 +63,6 @@ import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
 import com.codex.carjam.monetize.PlayGamesManager
-import com.codex.carjam.monetize.RazorpayManager
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -76,7 +76,6 @@ fun HomeScreen(
     ads: AdsManager,
     billing: BillingManager,
     pgs: PlayGamesManager,
-    razorpay: RazorpayManager,
     online: Boolean,
     onPlay: (Int) -> Unit,
     onPractice: () -> Unit,
@@ -95,7 +94,10 @@ fun HomeScreen(
     val dailyReady = DailyRewards.canClaim(prefs)
     val activity = LocalActivity()
     LaunchedEffect(online) {
-        if (online) activity?.let { pgs.silentCheck(it) }
+        if (online) {
+            activity?.let { pgs.silentCheck(it) }
+            LiveBoard.sync(prefs)
+        }
     }
     // live-ops popup: pitch today's event once per day (after onboarding)
     val todayEpoch = (System.currentTimeMillis() / 86_400_000L).toInt()
@@ -329,7 +331,6 @@ fun HomeScreen(
                     billing = billing,
                     ads = ads,
                     prefs = prefs,
-                    razorpay = razorpay,
                     activity = act,
                     onClose = { showShop = false },
                 )

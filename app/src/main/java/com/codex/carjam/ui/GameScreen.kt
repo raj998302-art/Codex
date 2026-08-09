@@ -35,13 +35,13 @@ import com.codex.carjam.game.Fx
 import com.codex.carjam.game.GameEngine
 import com.codex.carjam.game.GameResult
 import com.codex.carjam.game.LevelGenerator
+import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.SoundManager
 import com.codex.carjam.game.render.GameIconKind
 import com.codex.carjam.game.render.Painters
 import com.codex.carjam.monetize.AdsManager
 import com.codex.carjam.monetize.BillingManager
-import com.codex.carjam.monetize.RazorpayManager
 import kotlin.math.min
 
 @Composable
@@ -53,7 +53,6 @@ fun GameScreen(
     sound: SoundManager,
     ads: AdsManager,
     billing: BillingManager,
-    razorpay: RazorpayManager,
     onHome: () -> Unit,
     onNext: () -> Unit,
     onRetry: () -> Unit,
@@ -78,6 +77,7 @@ fun GameScreen(
                 Fx.WIN -> {
                     sound.win()
                     if (practice) prefs.recordPractice() else prefs.recordWin()
+                    if (!practice) LiveBoard.sync(prefs, force = true)
                 }
 
                 Fx.LOSE -> {
@@ -236,7 +236,6 @@ fun GameScreen(
                     billing = billing,
                     ads = ads,
                     prefs = prefs,
-                    razorpay = razorpay,
                     activity = act,
                     onClose = { showShop = false },
                 )

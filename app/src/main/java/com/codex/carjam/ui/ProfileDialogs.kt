@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codex.carjam.game.AvatarFrames
 import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.Referral
@@ -76,7 +77,7 @@ fun ProfileDialog(
                         .background(Color.White, CircleShape)
                         .border(4.dp, Color(0xFFFFB300), CircleShape)
                         .padding(4.dp),
-                ) { AvatarIcon(prefs.avatarId.intValue, 92.dp) }
+                ) { AvatarIcon(prefs.avatarId.intValue, 92.dp, frameId = prefs.avatarFrame.intValue) }
 
                 SpacerH(10.dp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -123,6 +124,64 @@ fun ProfileDialog(
                     SpacerH(8.dp)
                 }
 
+                // ---- v3.0 collectible DP frames
+                SpacerH(2.dp)
+                BasicText("DP FRAME", style = TextStyle(color = Sub, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp))
+                SpacerH(6.dp)
+                for (row in listOf(AvatarFrames.ALL.take(3), AvatarFrames.ALL.drop(3))) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        for (f in row) {
+                            val owned = prefs.ownedFrames.value.contains(f.id)
+                            val selected = prefs.avatarFrame.intValue == f.id
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (selected) Color(0xFFFFF0C2) else Color.White, RoundedCornerShape(14.dp))
+                                    .border(
+                                        if (selected) 3.dp else 2.dp,
+                                        if (selected) Color(0xFFFFB300) else Color(0xFFDDCEB0),
+                                        RoundedCornerShape(14.dp),
+                                    )
+                                    .clickable {
+                                        when {
+                                            owned -> prefs.selectFrame(f.id)
+                                            AvatarFrames.purchase(f, prefs) -> {
+                                                prefs.unlockFrame(f.id)
+                                                prefs.selectFrame(f.id)
+                                                CloudSave.sync(prefs, force = true)
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                            ) {
+                                AvatarIcon(prefs.avatarId.intValue, 46.dp, frameId = f.id)
+                                SpacerH(3.dp)
+                                BasicText(
+                                    f.title,
+                                    style = TextStyle(color = Ink, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold),
+                                )
+                                BasicText(
+                                    when {
+                                        selected -> "USING"
+                                        owned -> "USE"
+                                        f.unlockLevel > 0 -> "LVL ${f.unlockLevel}"
+                                        f.gemPrice > 0 -> "${f.gemPrice} GEMS"
+                                        f.coinPrice > 0 -> "${f.coinPrice}"
+                                        else -> "FREE"
+                                    },
+                                    style = TextStyle(
+                                        color = if (selected) Color(0xFF2FA84F) else if (owned) Color(0xFF2E5FBB) else Sub,
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    SpacerH(8.dp)
+                }
+
                 // ---- stats
                 SpacerH(4.dp)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -132,20 +191,37 @@ fun ProfileDialog(
                     StatCell("PRACTICE", "${prefs.practiceWins.intValue}", Modifier.weight(1f))
                 }
 
-                // ---- garage
+                // ---- garage & collection
                 SpacerH(12.dp)
                 var showGarage by remember { mutableStateOf(false) }
-                SquishyButton(
-                    "MY GARAGE",
-                    onClick = { showGarage = true },
-                    top = Color(0xFFB678E8),
-                    bottom = Color(0xFF8A45C4),
-                    height = 46.dp,
-                    textSize = 16.dp,
-                    icon = { GameIcon(GameIconKind.PARKING, 22.dp) },
-                )
+                var showCollection by remember { mutableStateOf(false) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SquishyButton(
+                        "MY GARAGE",
+                        onClick = { showGarage = true },
+                        modifier = Modifier.weight(1f),
+                        top = Color(0xFFB678E8),
+                        bottom = Color(0xFF8A45C4),
+                        height = 46.dp,
+                        textSize = 14.dp,
+                        icon = { GameIcon(GameIconKind.PARKING, 20.dp) },
+                    )
+                    SquishyButton(
+                        "CARDS",
+                        onClick = { showCollection = true },
+                        modifier = Modifier.weight(1f),
+                        top = Color(0xFF7E9CFF),
+                        bottom = Color(0xFF4C5FD0),
+                        height = 46.dp,
+                        textSize = 14.dp,
+                        icon = { GameIcon(GameIconKind.MEDAL_1, 20.dp) },
+                    )
+                }
                 if (showGarage) {
                     GarageDialog(prefs = prefs, onChanged = { CloudSave.sync(prefs, force = true) }, onClose = { showGarage = false })
+                }
+                if (showCollection) {
+                    CollectionDialog(prefs = prefs, onClose = { showCollection = false })
                 }
 
                 SpacerH(12.dp)

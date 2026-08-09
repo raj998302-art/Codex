@@ -93,6 +93,7 @@ fun HomeScreen(
     var showRank by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
     var showQuests by remember { mutableStateOf(false) }
+    var showPiggy by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(!prefs.welcomed.value) }
     var seasonPrize by remember { mutableStateOf<SeasonPrize?>(null) }
     val theme = run {
@@ -153,7 +154,7 @@ fun HomeScreen(
                         .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AvatarIcon(prefs.avatarId.intValue, 30.dp)
+                    AvatarIcon(prefs.avatarId.intValue, 30.dp, frameId = prefs.avatarFrame.intValue)
                     SpacerW(6.dp)
                     BasicText(
                         text = prefs.playerName,
@@ -263,6 +264,7 @@ fun HomeScreen(
                 ActionChip(GameIconKind.GIFT, "GIFT", badge = dailyReady) { sound.tap(); showDaily = true }
                 ActionChip(GameIconKind.CALENDAR, "EVENTS") { sound.tap(); showEvents = true }
                 ActionChip(GameIconKind.TROPHY, "RANK") { sound.tap(); showRank = true }
+                ActionChip(GameIconKind.PIGGY, "PIGGY", badge = prefs.piggyFull) { sound.tap(); showPiggy = true }
             }
 
             SpacerH(16.dp)
@@ -382,6 +384,11 @@ fun HomeScreen(
         }
         if (showRank) {
             LeaderboardDialog(prefs = prefs, onClose = { showRank = false })
+        }
+        if (showPiggy) {
+            activity?.let {
+                PiggyBankDialog(prefs = prefs, billing = billing, activity = it, onClose = { showPiggy = false })
+            } ?: run { showPiggy = false }
         }
         if (showProfile) {
             activity?.let {

@@ -1897,6 +1897,87 @@ object Painters {
         }
     }
 
+    // ------------------------------------------------------------ avatar frames
+
+    /**
+     * v3.0 decorative ring drawn around a profile avatar.
+     * frameId 0 = plain gold ring; others add themed deco (see AvatarFrames).
+     */
+    fun DrawScope.drawAvatarFrame(frameId: Int, cx: Float, cy: Float, r: Float) {
+        val ctr = Offset(cx, cy)
+        when (frameId) {
+            1 -> { // Sprinter — racing-blue ring with checkered studs
+                drawCircle(Color(0xFF2E5FBB), radius = r * 1.04f, center = ctr, style = Stroke(r * 0.11f))
+                drawCircle(Color(0xFF9FC8FF), radius = r * 1.04f, center = ctr, style = Stroke(r * 0.035f))
+                for (i in 0..7) {
+                    val a = Math.toRadians((i * 45.0))
+                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.04f
+                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.04f
+                    drawCircle(if (i % 2 == 0) Color.White else Color(0xFF14335F), radius = r * 0.075f, center = Offset(bx, by))
+                }
+            }
+
+            2 -> { // Champion — royal gold ring with a crown on top
+                drawCircle(Color(0xFFE8A50C), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.13f))
+                drawCircle(Color(0xFFFFE27A), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.04f))
+                val crownY = cy - r * 1.28f
+                val crown = Path().apply {
+                    moveTo(cx - r * 0.38f, crownY + r * 0.18f)
+                    lineTo(cx - r * 0.38f, crownY - r * 0.06f)
+                    lineTo(cx - r * 0.19f, crownY + r * 0.05f)
+                    lineTo(cx, crownY - r * 0.16f)
+                    lineTo(cx + r * 0.19f, crownY + r * 0.05f)
+                    lineTo(cx + r * 0.38f, crownY - r * 0.06f)
+                    lineTo(cx + r * 0.38f, crownY + r * 0.18f)
+                    close()
+                }
+                drawPath(crown, Color(0xFFFFC93C))
+                drawPath(crown, Color(0xFFB8860B), style = Stroke(r * 0.03f))
+            }
+
+            3 -> { // Frost — icy ring with snow dots
+                drawCircle(Color(0xFF9BD8F5), radius = r * 1.04f, center = ctr, style = Stroke(r * 0.12f))
+                drawCircle(Color.White, radius = r * 1.04f, center = ctr, style = Stroke(r * 0.03f))
+                for (i in 0..5) {
+                    val a = Math.toRadians((i * 60.0) + 15.0)
+                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.04f
+                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.04f
+                    drawCircle(Color.White, radius = r * 0.08f, center = Offset(bx, by))
+                    drawCircle(Color(0xFFC9ECFF), radius = r * 0.045f, center = Offset(bx, by))
+                }
+            }
+
+            4 -> { // Inferno — ember ring with little flame tongues
+                drawCircle(Color(0xFF8C2B12), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.13f))
+                drawCircle(Color(0xFFFF7A2F), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.05f))
+                for (i in 0..5) {
+                    val a = Math.toRadians((i * 60.0) - 30.0)
+                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.05f
+                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.05f
+                    drawCircle(Color(0xFFFFB02E), radius = r * 0.07f, center = Offset(bx, by))
+                }
+            }
+
+            5 -> { // Midnight — deep violet ring with moon & stars
+                drawCircle(Color(0xFF2B2350), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.13f))
+                drawCircle(Color(0xFF7E6FD0), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.04f))
+                drawCircle(Color(0xFFFFF3B8), radius = r * 0.16f, center = Offset(cx + r * 0.62f, cy - r * 0.78f))
+                drawCircle(Color(0xFF2B2350), radius = r * 0.13f, center = Offset(cx + r * 0.70f, cy - r * 0.82f))
+                for (i in 0..3) {
+                    val a = Math.toRadians((i * 90.0) + 40.0)
+                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.05f
+                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.05f
+                    star(bx, by, r * 0.09f, Color(0xFFFFE27A))
+                }
+            }
+
+            else -> { // 0 Rookie — clean gold ring
+                drawCircle(Color(0xFFE8A50C), radius = r * 1.03f, center = ctr, style = Stroke(r * 0.10f))
+                drawCircle(Color(0xFFFFF0C2), radius = r * 1.03f, center = ctr, style = Stroke(r * 0.03f))
+            }
+        }
+    }
+
     private fun mixWhite(c: Color, f: Float): Color = Color(
         red = c.red + (1f - c.red) * f,
         green = c.green + (1f - c.green) * f,

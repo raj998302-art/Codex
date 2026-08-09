@@ -185,12 +185,16 @@ fun CoinIcon(sizeDp: Dp = 26.dp) {
     }
 }
 
-/** Toon profile avatar (see Painters.drawAvatar for the 8 styles). */
+/** Toon profile avatar (see Painters.drawAvatar for the 8 styles), with an optional v3.0 frame ring. */
 @Composable
-fun AvatarIcon(id: Int, sizeDp: Dp = 42.dp, modifier: Modifier = Modifier) {
+fun AvatarIcon(id: Int, sizeDp: Dp = 42.dp, modifier: Modifier = Modifier, frameId: Int = -1) {
     Canvas(modifier.size(sizeDp)) {
         val s = size.width
-        with(Painters) { drawAvatar(id, s / 2f, s / 2f, s * 0.48f) }
+        val r = if (frameId >= 0) s * 0.42f else s * 0.48f
+        with(Painters) {
+            drawAvatar(id, s / 2f, s / 2f, r)
+            if (frameId >= 0) drawAvatarFrame(frameId, s / 2f, s / 2f, r)
+        }
     }
 }
 

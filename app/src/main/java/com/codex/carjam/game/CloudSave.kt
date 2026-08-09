@@ -83,6 +83,10 @@ object CloudSave {
         .put("rideSel", prefs.selectedRide.value)
         .put("hammers", prefs.hammers.intValue)
         .put("shuffles", prefs.shufflesStock.intValue)
+        .put("elims", prefs.elims.intValue)
+        .put("piggy", prefs.piggy.intValue)
+        .put("frames", prefs.ownedFrames.value.joinToString(","))
+        .put("frameSel", prefs.avatarFrame.intValue)
 
     private val NUM_KEYS = listOf(
         "coins", "gems", "maxLevel", "totalCoinsEarned",

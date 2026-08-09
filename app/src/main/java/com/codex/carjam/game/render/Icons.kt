@@ -15,7 +15,7 @@ import kotlin.math.sin
 enum class GameIconKind {
     CART, GIFT, CALENDAR, TROPHY, GRAD_CAP, WIFI_OFF, SHIELD, LOCK, PLAY_AD,
     GEM, MEDAL_1, MEDAL_2, MEDAL_3, FIRE, CLOVER, PARKING, MYSTERY, BOLT, COIN_STACK, STAR,
-    GAMEPAD, HAMMER, SHUFFLE,
+    GAMEPAD, HAMMER, SHUFFLE, ELIMINATE, PIGGY,
 }
 
 /**
@@ -459,6 +459,66 @@ object Icons {
         drawPath(h2i, tealDark)
     }
 
+    /** Eliminate booster: purple VIP ride with a big red cross-out. */
+    fun DrawScope.eliminate(l: Float, t: Float, s: Float) {
+        val dark = Color(0xFF5B2A94)
+        val purple = Color(0xFF9B59E0)
+        // little car body (top-down)
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.14f, t + s * 0.28f), Size(s * 0.44f, s * 0.44f), borderRadiusFix(s * 0.12f))
+        drawRoundRect(
+            Brush.verticalGradient(listOf(purple, dark), startY = t + s * 0.30f, endY = t + s * 0.70f),
+            Offset(l + s * 0.17f, t + s * 0.31f), Size(s * 0.38f, s * 0.38f), borderRadiusFix(s * 0.10f),
+        )
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.26f, t + s * 0.38f), Size(s * 0.20f, s * 0.16f), borderRadiusFix(s * 0.05f))
+        // wheels
+        drawRect(Color(0xFF161A21), Offset(l + s * 0.10f, t + s * 0.34f), Size(s * 0.06f, s * 0.10f))
+        drawRect(Color(0xFF161A21), Offset(l + s * 0.56f, t + s * 0.34f), Size(s * 0.06f, s * 0.10f))
+        drawRect(Color(0xFF161A21), Offset(l + s * 0.10f, t + s * 0.56f), Size(s * 0.06f, s * 0.10f))
+        drawRect(Color(0xFF161A21), Offset(l + s * 0.56f, t + s * 0.56f), Size(s * 0.06f, s * 0.10f))
+        // the cross-out
+        drawLine(Color(0xFF2B2B33), Offset(l + s * 0.40f, t + s * 0.40f), Offset(l + s * 0.88f, t + s * 0.88f), strokeWidth = s * 0.14f)
+        drawLine(Color(0xFF2B2B33), Offset(l + s * 0.88f, t + s * 0.40f), Offset(l + s * 0.40f, t + s * 0.88f), strokeWidth = s * 0.14f)
+        drawLine(Color(0xFFFF4757), Offset(l + s * 0.42f, t + s * 0.42f), Offset(l + s * 0.86f, t + s * 0.86f), strokeWidth = s * 0.075f)
+        drawLine(Color(0xFFFF4757), Offset(l + s * 0.86f, t + s * 0.42f), Offset(l + s * 0.42f, t + s * 0.86f), strokeWidth = s * 0.075f)
+    }
+
+    /** Piggy bank: pink piggy with snout, ear, and a gold coin dropping in. */
+    fun DrawScope.piggy(l: Float, t: Float, s: Float) {
+        val pink = Color(0xFFFFA4C4)
+        val pinkDark = Color(0xFFE2749E)
+        // ear
+        val ear = Path().apply {
+            moveTo(l + s * 0.68f, t + s * 0.22f)
+            lineTo(l + s * 0.86f, t + s * 0.30f)
+            lineTo(l + s * 0.70f, t + s * 0.42f)
+            close()
+        }
+        drawPath(ear, pinkDark)
+        // body
+        drawCircle(Color(0xFF2B2B33), radius = s * 0.345f, center = Offset(l + s * 0.50f, t + s * 0.56f))
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0xFFFFC7DC), pink, pinkDark),
+                center = Offset(l + s * 0.42f, t + s * 0.46f),
+                radius = s * 0.52f,
+            ),
+            radius = s * 0.32f, center = Offset(l + s * 0.50f, t + s * 0.56f),
+        )
+        // snout
+        drawCircle(Color(0xFF2B2B33), radius = s * 0.095f, center = Offset(l + s * 0.235f, t + s * 0.56f))
+        drawCircle(Color(0xFFFFB9D2), radius = s * 0.080f, center = Offset(l + s * 0.235f, t + s * 0.56f))
+        drawCircle(pinkDark, radius = s * 0.020f, center = Offset(l + s * 0.215f, t + s * 0.56f))
+        drawCircle(pinkDark, radius = s * 0.020f, center = Offset(l + s * 0.255f, t + s * 0.56f))
+        // eye
+        drawCircle(Color(0xFF2B2B33), radius = s * 0.032f, center = Offset(l + s * 0.40f, t + s * 0.44f))
+        // legs
+        drawRoundRect(pinkDark, Offset(l + s * 0.36f, t + s * 0.82f), Size(s * 0.07f, s * 0.10f), borderRadiusFix(s * 0.03f))
+        drawRoundRect(pinkDark, Offset(l + s * 0.60f, t + s * 0.82f), Size(s * 0.07f, s * 0.10f), borderRadiusFix(s * 0.03f))
+        // coin halfway in the slot
+        drawRoundRect(Color(0xFF2B2B33), Offset(l + s * 0.44f, t + s * 0.235f), Size(s * 0.16f, s * 0.035f), borderRadiusFix(s * 0.017f))
+        outlineCircle(Offset(l + s * 0.52f, t + s * 0.17f), s * 0.085f, s * 0.030f, Color(0xFFFFD32E))
+    }
+
     /** Routes an icon kind to its painter. */
     fun DrawScope.icon(kind: GameIconKind, l: Float, t: Float, s: Float) {
         when (kind) {
@@ -485,6 +545,8 @@ object Icons {
             GameIconKind.GAMEPAD -> gamepad(l, t, s)
             GameIconKind.HAMMER -> hammer(l, t, s)
             GameIconKind.SHUFFLE -> shuffle(l, t, s)
+            GameIconKind.ELIMINATE -> eliminate(l, t, s)
+            GameIconKind.PIGGY -> piggy(l, t, s)
         }
     }
 }

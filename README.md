@@ -213,6 +213,17 @@ player's own saved stats (still zero demo bots).
 | **Next-unlock teaser** | A pill on the win panel names the next map/board waiting ahead ("AT L21: Lava MAP") |
 | **METRO train polish** | Reference-look: orange cab stripe with shine line, door seams, platform railing behind the queue band |
 
+## v3.0 (mega drop: Eliminate + Piggy Bank + Cards + Frames + Podium)
+
+| System | What changed |
+| --- | --- |
+| **ELIMINATE booster** | Third belt booster: purple chip arms, tap ANY arena car (ice, chains, gate or jammed — doesn't matter) and it drives out instantly, still ticking gates and snapping chains. Arm/disarm is mutually exclusive with the Ice Hammer; 1 free sample, then gem-priced refills in the BOOSTER BELT shop (x1 = 12 gems, x3 = 30 gems) |
+| **Piggy Bank (0/800)** | Every win drops +20 coins into the pig. Home PIGGY chip opens the bank: fill meter `X / 800`, and once FULL a BREAK button (Play Billing `piggy_bank`, default price shown ₹210.00) pours all 800 into the wallet. Fill + break sync to the cloud save with per-hour server clamps |
+| **Card collection (24 rides)** | Profile → CARDS: `No.1…No.24` wall — locked cards are gray `???` silhouettes with the unlock level on top, unlocked cards show the full-colour ride (taxi, sport, police, ambulance, school…). Footer progress bar `COLLECTION PROGRESS: X/24`, climb levels to finish the set |
+| **Avatar frames (6)** | Profile gets a DP FRAME shelf: ROOKIE free, SPRINTER 150 coins, CHAMPION 300 coins, FROST at L9, INFERNO at L21, MIDNIGHT 45 gems. Hand-drawn ring painters (checkered studs, crown, snow, embers, moon & stars) render on the profile DP and home HUD chip; owned frames union-merge through the cloud like the garage |
+| **League podium** | TOP RACERS opens with a visual podium when 3+ racers exist — centre #1 on the high block with gold, sides #2/#3, medal + avatar + rating each; your own spot highlights gold |
+| **Economy + sync hardening** | Booster-shop gem prices, piggy clamp 80/hr (cap 800) and elims clamp 3/hr (cap 99) server-side; `frames`/`frameSel` ride the save schema with union-merge |
+
 ## v2.4 (cloud save + hardened security)
 
 | System | What changed |

@@ -100,6 +100,8 @@ class SoundManager(private val prefs: Prefs) {
 
     fun unlock() = play(ToneGenerator.TONE_PROP_BEEP2, 110)
 
+    fun eliminate() = play(ToneGenerator.TONE_PROP_ACK, 110)
+
     fun blocked() = play(ToneGenerator.TONE_SUP_CONGESTION, 110)
 
     fun whoosh() = play(ToneGenerator.TONE_CDMA_PIP, 90)

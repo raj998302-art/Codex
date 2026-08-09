@@ -87,7 +87,8 @@ fun GameScreen(
                 }
 
                 Fx.CHAINBREAK -> sound.chainBreak()
-                Fx.UNLOCK -> sound.unlock()
+                    Fx.UNLOCK -> sound.unlock()
+                    Fx.ELIMINATE -> sound.eliminate()
                 Fx.BLOCKED -> {
                     sound.blocked()
                     if (prefs.vibrateOn.value) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -105,6 +106,8 @@ fun GameScreen(
                     sound.win()
                     if (practice) prefs.recordPractice() else prefs.recordWin()
                     if (!practice) {
+                        // v3.0: every win drops coins into the Piggy Bank
+                        prefs.addPiggy(20)
                         LiveBoard.sync(prefs, force = true)
                         CloudSave.sync(prefs, force = true)
                     }
@@ -157,6 +160,7 @@ fun GameScreen(
     var showBoostShop by remember { mutableStateOf(false) }
     var showMoreSpot by remember { mutableStateOf(false) }
     var hammerArmed by remember { mutableStateOf(false) }
+    var elimArmed by remember { mutableStateOf(false) }
     var boostGift by remember { mutableStateOf(false) }
 
     // one-time v2.7 booster welcome gift
@@ -170,7 +174,7 @@ fun GameScreen(
             Modifier
                 .fillMaxSize()
                 .onSizeChanged { viewSize = it }
-                .pointerInput(engine, hammerArmed) {
+                .pointerInput(engine, hammerArmed, elimArmed) {
                     detectTapGestures { off ->
                         val s = min(viewSize.width / Dim.VW, viewSize.height / Dim.VH)
                         val ox = (viewSize.width - Dim.VW * s) / 2f
@@ -184,6 +188,14 @@ fun GameScreen(
                         if (lockedHit && engine.result == GameResult.PLAYING) {
                             showMoreSpot = true
                             sound.tap()
+                        } else if (elimArmed) {
+                            // v3.0 Eliminate: insta-send ANY tapped car out of the arena
+                            // (even frozen ones) — spent only on a successful hit
+                            val hit = engine.hitCarAt(gx, gy)
+                            if (hit != null && engine.eliminateCar(hit)) {
+                                prefs.useElim()
+                                elimArmed = false
+                            }
                         } else if (hammerArmed) {
                             // armed hammer: only shatters ice, never moves cars,
                             // and is only spent on a successful smash
@@ -297,6 +309,17 @@ fun GameScreen(
                     .padding(bottom = 84.dp),
             )
         }
+        // armed-eliminate hint chip
+        if (elimArmed && result == GameResult.PLAYING) {
+            Pill(
+                "TAP ANY CAR TO ELIMINATE IT",
+                bg = Color(0xFF8E4BD6).copy(alpha = 0.92f),
+                icon = { GameIcon(GameIconKind.ELIMINATE, 22.dp) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 84.dp),
+            )
+        }
 
         // booster belt
         Row(
@@ -318,6 +341,33 @@ fun GameScreen(
 
                         prefs.hammers.intValue > 0 && result == GameResult.PLAYING -> {
                             hammerArmed = true
+                            elimArmed = false
+                            sound.tap()
+                        }
+
+                        else -> {
+                            showBoostShop = true
+                            sound.tap()
+                        }
+                    }
+                },
+            )
+            SpacerW(8.dp)
+            SpacerW(8.dp)
+            BoostChip(
+                kind = GameIconKind.ELIMINATE,
+                count = prefs.elims.intValue,
+                armed = elimArmed,
+                onClick = {
+                    when {
+                        elimArmed -> {
+                            elimArmed = false
+                            sound.tap()
+                        }
+
+                        prefs.elims.intValue > 0 && result == GameResult.PLAYING -> {
+                            elimArmed = true
+                            hammerArmed = false
                             sound.tap()
                         }
 
@@ -451,8 +501,16 @@ private fun BoostChip(
     armed: Boolean,
     onClick: () -> Unit,
 ) {
-    val top = if (kind == GameIconKind.HAMMER) Color(0xFF6FB6FF) else Color(0xFF5FE8DC)
-    val bottom = if (kind == GameIconKind.HAMMER) Color(0xFF2E5FBB) else Color(0xFF0E9E94)
+    val top = when (kind) {
+        GameIconKind.HAMMER -> Color(0xFF6FB6FF)
+        GameIconKind.ELIMINATE -> Color(0xFFB983F5)
+        else -> Color(0xFF5FE8DC)
+    }
+    val bottom = when (kind) {
+        GameIconKind.HAMMER -> Color(0xFF2E5FBB)
+        GameIconKind.ELIMINATE -> Color(0xFF6D28B8)
+        else -> Color(0xFF0E9E94)
+    }
     Box(
         Modifier
             .size(56.dp)

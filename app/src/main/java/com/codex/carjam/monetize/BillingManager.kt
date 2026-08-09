@@ -10,6 +10,7 @@ import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
+import com.codex.carjam.game.CloudSave
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
@@ -150,6 +151,19 @@ class BillingManager(
                     }
                 }
 
+                PRODUCT_PIGGY -> {
+                    // break the piggy bank: stored coins pour into the wallet
+                    prefs.breakPiggyBank()
+                    CloudSave.sync(prefs, force = true)
+                    val params = ConsumeParams.newBuilder()
+                        .setPurchaseToken(purchase.purchaseToken)
+                        .build()
+                    try {
+                        client?.consumeAsync(params) { _, _ -> }
+                    } catch (_: Throwable) {
+                    }
+                }
+
                 else -> {
                     val reward = PRODUCT_REWARDS[productId]
                     if (reward != null && (reward.first > 0 || reward.second > 0)) {
@@ -178,6 +192,7 @@ class BillingManager(
 
     companion object {
         const val PRODUCT_NO_ADS = "remove_ads"
+        const val PRODUCT_PIGGY = "piggy_bank"
         const val PRICE_NO_ADS_DEFAULT = "₹99"
 
         /** productId → (coins, gems) granted on purchase. */
@@ -209,6 +224,6 @@ class BillingManager(
             "gems_700" to "₹299",
         )
 
-        val PRODUCT_IDS: List<String> = listOf(PRODUCT_NO_ADS) + PRODUCT_REWARDS.keys
+        val PRODUCT_IDS: List<String> = listOf(PRODUCT_NO_ADS, PRODUCT_PIGGY) + PRODUCT_REWARDS.keys
     }
 }

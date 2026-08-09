@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.min
 import kotlin.random.Random
 
-enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK, HAMMER, SHUFFLE, CHAINED, CHAINBREAK, UNLOCK }
+enum class Fx { TAP, BLOCKED, WHOOSH, BOARD, COIN, DEPART, REVEAL, WIN, LOSE, CRACK, HAMMER, SHUFFLE, CHAINED, CHAINBREAK, UNLOCK, ELIMINATE }
 
 enum class GameResult { PLAYING, WON, LOST }
 
@@ -291,6 +291,23 @@ class GameEngine(
         car.popStart = ms
         lastActionMs = ms
         onFx(Fx.HAMMER)
+        return true
+    }
+
+    /**
+     * Eliminate VIP: drive [car] straight out regardless of ice, chains, the
+     * gate or traffic — needs one free parking slot. Mystery cars step out
+     * revealed (hidden colour could never board afterwards otherwise). Still
+     * counts as a normal exit: gate counter ticks and shackled chains snap.
+     */
+    fun eliminateCar(car: CarEnt): Boolean {
+        if (result != GameResult.PLAYING) return false
+        if (!car.inArena) return false
+        if (freeSlotIndex() == null) return false
+        car.frozenLeft = 0
+        car.revealed = true
+        onFx(Fx.ELIMINATE)
+        startExit(car)
         return true
     }
 

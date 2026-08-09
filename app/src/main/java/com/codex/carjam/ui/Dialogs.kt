@@ -650,6 +650,7 @@ private data class BoostOffer(
     val desc: String,
     val count: Int,
     val price: Int,
+    val gemPrice: Int = 0,
 )
 
 /** Booster shop: small coin-priced top-ups for the in-game booster belt. */
@@ -661,6 +662,8 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
             BoostOffer(GameIconKind.HAMMER, "ICE HAMMER x3", "Stock up for the deep ice levels.", 3, 650),
             BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x1", "Reshuffles the line so the front one fits.", 1, 200),
             BoostOffer(GameIconKind.SHUFFLE, "QUEUE MIX x3", "A pocket full of second chances.", 3, 500),
+            BoostOffer(GameIconKind.ELIMINATE, "ELIMINATE x1", "Instantly sends one picked car out of the jam.", 1, 0, gemPrice = 12),
+            BoostOffer(GameIconKind.ELIMINATE, "ELIMINATE x3", "Clear the nastiest blockers on sight.", 3, 0, gemPrice = 30),
         )
     }
     DialogOverlay {
@@ -668,7 +671,11 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
             DialogTitleText("BOOSTER BELT")
             SpacerH(8.dp)
             for (offer in offers) {
-                val afford = prefs.coins.intValue >= offer.price
+                val afford = if (offer.gemPrice > 0) {
+                    prefs.gems.intValue >= offer.gemPrice
+                } else {
+                    prefs.coins.intValue >= offer.price
+                }
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -691,11 +698,27 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
                     }
                     SpacerW(6.dp)
                     SquishyButton(
-                        "${offer.price}",
+                        if (offer.gemPrice > 0) "${offer.gemPrice}" else "${offer.price}",
                         onClick = {
-                            if (prefs.coins.intValue >= offer.price) {
+                            val paid = if (offer.gemPrice > 0) {
+                                if (prefs.gems.intValue >= offer.gemPrice) {
+                                    prefs.addGems(-offer.gemPrice)
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else if (prefs.coins.intValue >= offer.price) {
                                 prefs.addCoins(-offer.price)
-                                if (offer.kind == GameIconKind.HAMMER) prefs.addHammers(offer.count) else prefs.addShuffles(offer.count)
+                                true
+                            } else {
+                                false
+                            }
+                            if (paid) {
+                                when (offer.kind) {
+                                    GameIconKind.HAMMER -> prefs.addHammers(offer.count)
+                                    GameIconKind.ELIMINATE -> prefs.addElims(offer.count)
+                                    else -> prefs.addShuffles(offer.count)
+                                }
                                 CloudSave.sync(prefs, force = true)
                             }
                         },
@@ -704,7 +727,13 @@ fun BoosterShopDialog(prefs: Prefs, onClose: () -> Unit) {
                         bottom = if (afford) Color(0xFFE09B13) else Color(0xFFA89B86),
                         height = 36.dp,
                         textSize = 13.dp,
-                        icon = { CoinIcon(16.dp) },
+                        icon = {
+                            if (offer.gemPrice > 0) {
+                                GameIcon(GameIconKind.GEM, 16.dp)
+                            } else {
+                                CoinIcon(16.dp)
+                            }
+                        },
                     )
                 }
                 SpacerH(8.dp)

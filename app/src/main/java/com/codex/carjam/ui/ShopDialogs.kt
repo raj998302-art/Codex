@@ -37,6 +37,7 @@ import com.codex.carjam.R
 import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
+import com.codex.carjam.game.LeaderboardApi
 import com.codex.carjam.game.LiveBoard
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.render.GameIconKind
@@ -352,6 +353,11 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                 )
             }
             SpacerH(10.dp)
+            // v3.0 champion podium for the top 3 (like the League podium in the reference game)
+            if (live == true && entries.size >= 3) {
+                PodiumRow(entries[0], entries[1], entries[2], myId)
+                SpacerH(8.dp)
+            }
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -446,6 +452,60 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                 SquishyButton("CLOSE", onClick = onClose, modifier = Modifier.weight(1f), height = 46.dp, textSize = 14.dp)
             }
             SpacerH(4.dp)
+        }
+    }
+}
+
+/** v3.0 visual podium: #1 centre on the high block, #2 left, #3 right. */
+@Composable
+private fun PodiumRow(
+    first: LeaderboardApi.Entry,
+    second: LeaderboardApi.Entry,
+    third: LeaderboardApi.Entry,
+    myId: String,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFFF6E0), RoundedCornerShape(16.dp))
+            .border(2.dp, Color(0xFFE3B36B), RoundedCornerShape(16.dp))
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        PodiumSpot(second, GameIconKind.MEDAL_2, 44.dp, Color(0xFFB9C1C8), myId)
+        PodiumSpot(first, GameIconKind.MEDAL_1, 58.dp, Color(0xFFFFC93C), myId)
+        PodiumSpot(third, GameIconKind.MEDAL_3, 44.dp, Color(0xFFCD8B4B), myId)
+    }
+}
+
+@Composable
+private fun PodiumSpot(e: LeaderboardApi.Entry, medal: GameIconKind, size: androidx.compose.ui.unit.Dp, accent: Color, myId: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        GameIcon(medal, 22.dp)
+        SpacerH(2.dp)
+        Box(
+            Modifier
+                .background(Color.White, CircleShape)
+                .border(3.dp, accent, CircleShape)
+                .padding(3.dp),
+        ) {
+            AvatarIcon(e.avatarId, size)
+        }
+        SpacerH(2.dp)
+        BasicText(
+            (if (e.deviceId == myId) "YOU" else e.name).uppercase(),
+            style = TextStyle(
+                color = if (e.deviceId == myId) Color(0xFFB8860B) else Dark,
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+            maxLines = 1,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GameIcon(GameIconKind.TROPHY, 12.dp)
+            SpacerW(3.dp)
+            BasicText("${e.rating}", style = TextStyle(color = Muted, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold))
         }
     }
 }

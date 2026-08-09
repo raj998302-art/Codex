@@ -68,6 +68,10 @@ const saveSchema = new mongoose.Schema(
     rideSel: { type: String, default: 'sedan' },
     hammers: { type: Number, default: 0 },         // booster belt
     shuffles: { type: Number, default: 0 },
+    elims: { type: Number, default: 0 },           // eliminate booster
+    piggy: { type: Number, default: 0 },           // piggy-bank fill (0-800)
+    frames: { type: String, default: '0' },        // comma-joined unlocked avatar-frame ids
+    frameSel: { type: Number, default: 0 },        // currently worn avatar frame
   },
   { timestamps: true },
 );
@@ -152,6 +156,10 @@ const canonicalSave = (doc) => ({
   rideSel: typeof doc.rideSel === 'string' && doc.rideSel ? doc.rideSel : 'sedan',
   hammers: clampInt(doc.hammers, 0, 99),
   shuffles: clampInt(doc.shuffles, 0, 99),
+  elims: clampInt(doc.elims, 0, 99),
+  piggy: clampInt(doc.piggy, 0, 800),
+  frames: typeof doc.frames === 'string' && doc.frames ? doc.frames : '0',
+  frameSel: clampInt(doc.frameSel, 0, 99),
   updatedAt: new Date(doc.updatedAt).getTime(),
 });
 
@@ -265,6 +273,16 @@ app.post('/api/save', async (req, res) => {
     // Older clients don't send musicOn — keep whatever we already know.
     const musicOn = body.musicOn === undefined ? (P('musicOn') ?? true) : !!body.musicOn;
 
+    // Avatar frames (v3.0): union-merge unlocks like the garage; the worn
+    // frame only sticks when it survives the merge.
+    const frameIds = (s) => String(s || '').split(',').filter((x) => /^\d{1,2}$/.test(x));
+    const frames = [...new Set(['0', ...frameIds(P('frames')), ...frameIds(body.frames)])].slice(0, 32);
+    const frameSet = new Set(frames);
+    const bodyFrame = String(body.frameSel ?? '0');
+    const frameSel = frameSet.has(bodyFrame)
+      ? bodyFrame
+      : (frameSet.has(String(P('frameSel') ?? '')) ? String(P('frameSel')) : '0');
+
     const state = {
       name: cleanName(body.name),
       avatarId: clampInt(body.avatarId, 0, 7),
@@ -284,6 +302,10 @@ app.post('/api/save', async (req, res) => {
       rideSel,
       hammers: economyClamp(P('hammers'), elapsedH, body.hammers, 6, 3, 99),
       shuffles: economyClamp(P('shuffles'), elapsedH, body.shuffles, 9, 4, 99),
+      elims: economyClamp(P('elims'), elapsedH, body.elims, 3, 1, 99),
+      piggy: economyClamp(P('piggy'), elapsedH, body.piggy, 80, 40, 800),
+      frames: frames.join(','),
+      frameSel: clampInt(frameSel, 0, 99),
     };
 
     const doc = await Save.findOneAndUpdate(

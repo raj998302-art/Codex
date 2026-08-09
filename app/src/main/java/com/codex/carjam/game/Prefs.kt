@@ -280,6 +280,25 @@ class Prefs(context: Context) {
                 raised = true
             }
         }
+        // v3.0 avatar frames: union-merge unlocks (never lose a paid frame)
+        val cFrames = s.optString("frames", "")
+            .split(',')
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in 0..99 }
+            .toSet()
+        if (cFrames.isNotEmpty()) {
+            val mergedF = ownedFrames.value + cFrames
+            if (mergedF != ownedFrames.value) {
+                ownedFrames.value = mergedF
+                sp.edit().putString(KEY_FRAMES, mergedF.joinToString(",")).apply()
+                raised = true
+            }
+            val cFrameSel = s.optInt("frameSel", -1)
+            if (cFrameSel in 0..99 && mergedF.contains(cFrameSel) && cFrameSel != avatarFrame.intValue) {
+                selectFrame(cFrameSel)
+                raised = true
+            }
+        }
         if (s.has("musicOn")) {
             val cMusic = s.optBoolean("musicOn", musicOn.value)
             if (cMusic != musicOn.value) {
@@ -298,6 +317,18 @@ class Prefs(context: Context) {
         if (cShu in 0..99 && cShu > shufflesStock.intValue) {
             shufflesStock.intValue = cShu
             sp.edit().putInt(KEY_SHUFFLES, cShu).apply()
+            raised = true
+        }
+        val cElim = s.optInt("elims", -1)
+        if (cElim in 0..99 && cElim > elims.intValue) {
+            elims.intValue = cElim
+            sp.edit().putInt(KEY_ELIMS, cElim).apply()
+            raised = true
+        }
+        val cPiggy = s.optInt("piggy", -1)
+        if (cPiggy in 0..PIGGY_CAP && cPiggy > piggy.intValue) {
+            piggy.intValue = cPiggy
+            sp.edit().putInt(KEY_PIGGY, cPiggy).apply()
             raised = true
         }
         return raised
@@ -451,6 +482,72 @@ class Prefs(context: Context) {
         return true
     }
 
+    // ---------------------------------------------------------------- eliminate + piggy
+
+    var elims = mutableIntStateOf(sp.getInt(KEY_ELIMS, 1)) // everyone starts with one free ticket
+        private set
+
+    fun addElims(n: Int) {
+        if (n == 0) return
+        val v = (elims.intValue + n).coerceIn(0, 99)
+        elims.intValue = v
+        sp.edit().putInt(KEY_ELIMS, v).apply()
+    }
+
+    fun useElim(): Boolean {
+        if (elims.intValue <= 0) return false
+        addElims(-1)
+        return true
+    }
+
+    /** Piggy bank: fills with level wins, breakable via the Play Store purchase. */
+    var piggy = mutableIntStateOf(sp.getInt(KEY_PIGGY, 0))
+        private set
+
+    fun addPiggy(n: Int) {
+        if (n == 0) return
+        val v = (piggy.intValue + n).coerceIn(0, PIGGY_CAP)
+        piggy.intValue = v
+        sp.edit().putInt(KEY_PIGGY, v).apply()
+    }
+
+    val piggyFull: Boolean get() = piggy.intValue >= PIGGY_CAP
+
+    /** Purchase success: pour the bank into the wallet and reset it. */
+    fun breakPiggyBank(): Int {
+        val v = piggy.intValue
+        if (v > 0) addCoins(v)
+        piggy.intValue = 0
+        sp.edit().putInt(KEY_PIGGY, 0).apply()
+        return v
+    }
+
+    // ---------------------------------------------------------------- avatar frames
+
+    var ownedFrames = mutableStateOf<Set<Int>>(
+        (sp.getString(KEY_FRAMES, "0") ?: "0")
+            .split(',')
+            .mapNotNull { it.trim().toIntOrNull() }
+            .toSet() + 0,
+    )
+        private set
+
+    fun unlockFrame(id: Int) {
+        if (ownedFrames.value.contains(id)) return
+        val v = ownedFrames.value + id
+        ownedFrames.value = v
+        sp.edit().putString(KEY_FRAMES, v.joinToString(",")).apply()
+    }
+
+    var avatarFrame = mutableIntStateOf(sp.getInt(KEY_FRAME, 0))
+        private set
+
+    fun selectFrame(id: Int) {
+        if (!ownedFrames.value.contains(id)) return
+        avatarFrame.intValue = id
+        sp.edit().putInt(KEY_FRAME, id).apply()
+    }
+
     fun setRemoveAds(owned: Boolean) {
         removeAds.value = owned
         securedSet(KEY_NOADS_S, KEY_NOADS_B, if (owned) 1L else 0L)
@@ -535,6 +632,7 @@ class Prefs(context: Context) {
     companion object {
         const val AVATAR_COUNT = 8
         private const val MAX_COINS = 10_000_000
+        const val PIGGY_CAP = 800
         private const val MAX_GEMS = 500_000
         private const val MAX_SINGLE_GRANT = 500_000
 
@@ -553,6 +651,10 @@ class Prefs(context: Context) {
         private const val KEY_MUSIC = "music"
         private const val KEY_HAMMERS = "boost_hammers"
         private const val KEY_SHUFFLES = "boost_shuffles"
+        private const val KEY_ELIMS = "boost_elims"
+        private const val KEY_PIGGY = "piggy_bank_fill"
+        private const val KEY_FRAME = "avatar_frame"
+        private const val KEY_FRAMES = "avatar_frames_owned"
         private const val KEY_BOOST_GIFT = "boost_gift_v27"
         private const val KEY_RIDES = "owned_rides"
         private const val KEY_RIDE_SEL = "selected_ride"

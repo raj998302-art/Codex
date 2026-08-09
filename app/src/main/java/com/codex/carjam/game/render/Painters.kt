@@ -23,8 +23,6 @@ import com.codex.carjam.game.Dim
 import com.codex.carjam.game.GameEngine
 import com.codex.carjam.game.GameResult
 import com.codex.carjam.game.LevelTheme
-import com.codex.carjam.game.VehicleSkin
-import com.codex.carjam.game.VehicleSkins
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.min
@@ -85,8 +83,6 @@ object Painters {
         drawGate(engine)
         drawStationSign(theme, engine.remainingPassengers())
         drawQueue(engine)
-        // v3.3: per-parked-car fill ghosts (queue paint by color next to each seat)
-        drawQueuePaintGhosts(engine)
 
         // trails first (under the moving car)
         for (car in engine.cars) {
@@ -95,10 +91,7 @@ object Painters {
 
         // arena cars, painter's depth order
         val arenaCars = engine.cars.filter { it.phase == CarPhase.IN_ARENA }.sortedBy { it.spec.y }
-        for (car in arenaCars) {
-            val skin = VehicleSkins.selectFor(engine.spec.level, car.spec.id)?.id ?: 0
-            drawCarEntity(car, ms, chained = engine.isChainedActive(car), skinId = skin)
-        }
+        for (car in arenaCars) drawCarEntity(car, ms, chained = engine.isChainedActive(car))
 
         // parked + moving cars with their seated passengers
         for (car in engine.cars) {
@@ -437,6 +430,7 @@ object Painters {
 
     private fun DrawScope.drawThemeDeco(theme: LevelTheme, ms: Float) {
         when (theme.deco) {
+            Deco.EVENT -> {} // bisect-tolerant
             Deco.SEA -> {
                 // light rays
                 withTransform({ rotate(-18f, Offset(220f, 0f)) }) {
@@ -721,40 +715,6 @@ object Painters {
                     bi++
                 }
             }
-
-            Deco.EVENT -> {
-                // hero-day plaza: rotating amber spotlight beams + drifting confetti
-                val cx = Dim.VW / 2f
-                val ph = ms * 0.0006f
-                for (i in 0..2) {
-                    val a = ph + i * (2f * Math.PI.toFloat() / 3f)
-                    withTransform({ rotate(Math.toDegrees(a.toDouble()).toFloat(), Offset(cx, 260f)) }) {
-                        drawRect(
-                            Color(0xFFFFE9A8).copy(alpha = 0.10f),
-                            topLeft = Offset(cx - 60f, 260f),
-                            size = Size(120f, 760f),
-                        )
-                    }
-                }
-                // confetti flecks flutter down from the sky band
-                val cols = listOf(
-                    Color(0xFFFF5A5A),
-                    Color(0xFFFFD93D),
-                    Color(0xFF3B9BFF),
-                    Color(0xFF2ED573),
-                    Color(0xFFBF6CF2),
-                )
-                for (i in 0 until 26) {
-                    val fx = (i * 173f + sin(ms * 0.001f + i) * 40f) % Dim.VW
-                    val fall = (ms * 0.03f + i * 210f) % 900f
-                    val fy = 60f + fall
-                    val fy2 = if (fy > 620f) 620f - (fy - 620f) else fy
-                    val c = cols[i % cols.size]
-                    withTransform({ rotate((i * 37f + ms * 0.05f) % 360f, Offset(fx, fy2)) }) {
-                        drawRoundRect(c, Offset(fx - 6f, fy2 - 3f), Size(12f, 6f), cornerRadius = CornerRadius(2f))
-                    }
-                }
-            }
         }
     }
 
@@ -921,7 +881,7 @@ object Painters {
 
     // ------------------------------------------------------------------ entities
 
-    private fun DrawScope.drawCarEntity(car: CarEnt, ms: Float, chained: Boolean = false, skinId: Int = 0) {
+    private fun DrawScope.drawCarEntity(car: CarEnt, ms: Float, chained: Boolean = false) {
         var angle = car.angle
         var scale = 1f
         val wobbleAge = ms - car.wobbleStart
@@ -933,10 +893,6 @@ object Painters {
             scale = 1f + 0.30f * exp(-popAge / 140f) * sin(popAge / 36f)
         }
         drawCar(car.x, car.y, angle, car.type, car.color, scale, mystery = !car.revealed, variant = car.spec.id)
-        // v3.3 vehicle skin bolt-ons (hidden under mystery; skipped for stock cars)
-        if (skinId > 0 && car.revealed) {
-            drawCarSkinOverlay(skinId, car.x, car.y, angle, car.type, scale)
-        }
         if (car.frozenLeft > 0) {
             drawIce(car.x, car.y, angle, car.type, scale, cracked = car.spec.frozen - car.frozenLeft)
         }
@@ -1312,7 +1268,8 @@ object Painters {
 
             // ---------- type-specific dressing
             when (type) {
-                CarType.BUS, CarType.TOURIST -> {
+                CarType.TOURIST -> {} // bisect-tolerant
+                CarType.BUS -> {
                     // amber route board at the front
                     drawRoundRect(
                         color = Color(0xFFFFC94D).copy(alpha = 0.95f * alpha),
@@ -2016,267 +1973,9 @@ object Painters {
                 }
             }
 
-            6 -> { // Summer Beat — teal ring with sun rays + a palm sprig
-                drawCircle(Color(0xFF17A8B4), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.12f))
-                drawCircle(Color(0xFF9BEAEA), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.04f))
-                for (i in 0..7) {
-                    val a = Math.toRadians((i * 45.0) + 10.0)
-                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.05f
-                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.05f
-                    star(bx, by, r * 0.075f, Color(0xFFFFD93D))
-                }
-                val palm = Path().apply {
-                    moveTo(cx - r * 0.72f, cy + r * 0.72f)
-                    quadraticBezierTo(cx - r * 0.30f, cy + r * 0.52f, cx - r * 0.42f, cy + r * 0.86f)
-                    close()
-                }
-                drawPath(palm, Color(0xFF1FA94F))
-            }
-
-            7 -> { // Weekly Crown — podium gold ring with twin medallion crowns
-                drawCircle(Color(0xFFD9A021), radius = r * 1.06f, center = ctr, style = Stroke(r * 0.14f))
-                drawCircle(Color(0xFFFFF3B8), radius = r * 1.06f, center = ctr, style = Stroke(r * 0.04f))
-                for (sx in listOf(-1f, 1f)) {
-                    val baseX = cx + sx * r * 0.72f
-                    val baseY = cy - r * 0.80f
-                    val crown = Path().apply {
-                        moveTo(baseX - r * 0.20f, baseY + r * 0.10f)
-                        lineTo(baseX - r * 0.20f, baseY - r * 0.04f)
-                        lineTo(baseX - r * 0.10f, baseY + r * 0.03f)
-                        lineTo(baseX, baseY - r * 0.09f)
-                        lineTo(baseX + r * 0.10f, baseY + r * 0.03f)
-                        lineTo(baseX + r * 0.20f, baseY - r * 0.04f)
-                        lineTo(baseX + r * 0.20f, baseY + r * 0.10f)
-                        close()
-                    }
-                    drawPath(crown, Color(0xFFFFC93C))
-                    drawPath(crown, Color(0xFFB8860B), style = Stroke(r * 0.02f))
-                }
-            }
-
-            8 -> { // Meow Squad — cream ring with cat ears + whisker dots
-                drawCircle(Color(0xFFFFE3EC), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.12f))
-                drawCircle(Color(0xFFFF8FB1), radius = r * 1.05f, center = ctr, style = Stroke(r * 0.04f))
-                for (sx in listOf(-1f, 1f)) {
-                    val ear = Path().apply {
-                        moveTo(cx + sx * r * 0.52f, cy - r * 0.88f)
-                        lineTo(cx + sx * r * 0.86f, cy - r * 1.18f)
-                        lineTo(cx + sx * r * 0.94f, cy - r * 0.74f)
-                        close()
-                    }
-                    drawPath(ear, Color(0xFFFFB3C8))
-                    drawPath(ear, Color(0xFFD96E8E), style = Stroke(r * 0.02f))
-                }
-                drawCircle(Color(0xFFD96E8E), radius = r * 0.05f, center = Offset(cx - r * 0.66f, cy + r * 0.72f))
-                drawCircle(Color(0xFFD96E8E), radius = r * 0.05f, center = Offset(cx + r * 0.66f, cy + r * 0.72f))
-            }
-
-            9 -> { // Royal Velvet — deep purple ring with diamond studs
-                drawCircle(Color(0xFF5B2A94), radius = r * 1.06f, center = ctr, style = Stroke(r * 0.14f))
-                drawCircle(Color(0xFFB678E8), radius = r * 1.06f, center = ctr, style = Stroke(r * 0.04f))
-                for (i in 0..5) {
-                    val a = Math.toRadians((i * 60.0) + 30.0)
-                    val bx = cx + kotlin.math.cos(a).toFloat() * r * 1.06f
-                    val by = cy + kotlin.math.sin(a).toFloat() * r * 1.06f
-                    val gem = Path().apply {
-                        moveTo(bx, by - r * 0.10f)
-                        lineTo(bx + r * 0.08f, by)
-                        lineTo(bx, by + r * 0.10f)
-                        lineTo(bx - r * 0.08f, by)
-                        close()
-                    }
-                    drawPath(gem, Color(0xFF9FE8FF))
-                    drawPath(gem, Color(0xFF3B7FE0), style = Stroke(r * 0.015f))
-                }
-            }
-
             else -> { // 0 Rookie — clean gold ring
                 drawCircle(Color(0xFFE8A50C), radius = r * 1.03f, center = ctr, style = Stroke(r * 0.10f))
                 drawCircle(Color(0xFFFFF0C2), radius = r * 1.03f, center = ctr, style = Stroke(r * 0.03f))
-            }
-        }
-    }
-
-    // ------------------------------------------------------------ v3.3 vehicle skins
-
-    /**
-     * Skin decoration layered over a freshly drawn car ([drawCar]). Nothing here
-     * touches the silhouette — every look is a bolt-on, so gameplay geometry
-     * never changes. Drawn in the same car-local frame as drawCar's body pass.
-     */
-    fun DrawScope.drawCarSkinOverlay(
-        skinId: Int,
-        cx: Float,
-        cy: Float,
-        angleDeg: Float,
-        type: CarType,
-        scale: Float,
-        alpha: Float = 1f,
-    ) {
-        val skin = VehicleSkins.byId(skinId) ?: return
-        val hl = type.len / 2f
-        val hw = type.wid / 2f
-        withTransform({
-            translate(cx, cy)
-            rotate(angleDeg, Offset.Zero)
-            scale(scale, scale, Offset.Zero)
-        }) {
-            when (skin) {
-                VehicleSkin.OFFROAD -> {
-                    // roof rack + rails + spare tire on the roof
-                    drawRoundRect(Color(0xFF4A3B2A).copy(alpha = 0.85f * alpha), Offset(-hw * 0.46f, -hl * 0.30f), Size(hw * 0.92f, hl * 0.60f), CornerRadius(6f))
-                    for (i in 0..2) {
-                        drawRoundRect(Color(0xFF74604A).copy(alpha = alpha), Offset(-hw * 0.40f + i * hw * 0.34f, -hl * 0.26f), Size(hw * 0.06f, hl * 0.52f), CornerRadius(3f))
-                    }
-                    drawCircle(Color(0xFF2A2F38).copy(alpha = alpha), radius = 12f, center = Offset(0f, -hl * 0.60f))
-                    drawCircle(Color(0xFF666E79).copy(alpha = alpha), radius = 7.5f, center = Offset(0f, -hl * 0.60f))
-                    drawCircle(Color(0xFF8A6B4A).copy(alpha = 0.6f * alpha), radius = 4f, center = Offset(-hw * 0.8f, hl * 0.72f))
-                    drawCircle(Color(0xFF8A6B4A).copy(alpha = 0.6f * alpha), radius = 3f, center = Offset(hw * 0.8f, hl * 0.72f))
-                }
-
-                VehicleSkin.FORMULA -> {
-                    // rear wing + struts + nose stripe
-                    drawRoundRect(Color(0xFF161A21).copy(alpha = alpha), Offset(-hw * 0.72f, hl * 0.70f), Size(hw * 1.44f, hl * 0.16f), CornerRadius(4f))
-                    drawRoundRect(Color(0xFF3E4653).copy(alpha = alpha), Offset(-hw * 0.60f, hl * 0.60f), Size(hw * 0.10f, hl * 0.18f), CornerRadius(2f))
-                    drawRoundRect(Color(0xFF3E4653).copy(alpha = alpha), Offset(hw * 0.50f, hl * 0.60f), Size(hw * 0.10f, hl * 0.18f), CornerRadius(2f))
-                    drawRoundRect(Color.White.copy(alpha = 0.75f * alpha), Offset(-hw * 0.06f, -hl * 0.85f), Size(hw * 0.12f, hl * 1.5f), CornerRadius(6f))
-                }
-
-                VehicleSkin.GT -> {
-                    // dark roof rails + gold pin stripe
-                    drawRoundRect(Color(0xFF23262E).copy(alpha = 0.8f * alpha), Offset(-hw * 0.80f, -hl * 0.22f), Size(hw * 0.10f, hl * 1.35f), CornerRadius(4f))
-                    drawRoundRect(Color(0xFF23262E).copy(alpha = 0.8f * alpha), Offset(hw * 0.70f, -hl * 0.22f), Size(hw * 0.10f, hl * 1.35f), CornerRadius(4f))
-                    drawRoundRect(Color(0xFFFFD93D).copy(alpha = 0.85f * alpha), Offset(-1.5f, -hl * 0.9f), Size(3f, hl * 0.62f), CornerRadius(1.5f))
-                }
-
-                VehicleSkin.POD -> {
-                    // black glass dome roof with shine
-                    drawOval(Color(0xFF101923).copy(alpha = 0.85f * alpha), Offset(-hw * 0.5f, -hl * 0.34f), Size(hw * 1.0f, hl * 0.68f))
-                    drawOval(Color(0xFF5F8CC4).copy(alpha = 0.4f * alpha), Offset(-hw * 0.34f, -hl * 0.26f), Size(hw * 0.5f, hl * 0.3f))
-                }
-
-                VehicleSkin.TRUCK -> {
-                    // bolt-on cargo container, ribbed
-                    drawRoundRect(Color(0xFFECEFF3).copy(alpha = 0.92f * alpha), Offset(-hw * 0.90f, -hl * 0.40f), Size(hw * 1.05f, hl * 0.80f), CornerRadius(6f))
-                    drawRoundRect(Color(0xFF9AA5B1).copy(alpha = 0.9f * alpha), Offset(-hw * 0.90f, -hl * 0.40f), Size(hw * 1.05f, hl * 0.80f), CornerRadius(6f), style = Stroke(2.5f))
-                    for (i in 1..4) {
-                        drawRoundRect(Color(0xFFB9C1C8).copy(alpha = 0.8f * alpha), Offset(-hw * 0.90f + i * hw * 0.21f, -hl * 0.36f), Size(hw * 0.05f, hl * 0.72f), CornerRadius(2f))
-                    }
-                }
-
-                VehicleSkin.TURBO -> {
-                    // twin red go-stripes + rear diffuser vents
-                    drawRoundRect(Color(0xFFD63030).copy(alpha = 0.9f * alpha), Offset(-hw * 0.16f, -hl * 0.92f), Size(hw * 0.10f, hl * 1.84f), CornerRadius(5f))
-                    drawRoundRect(Color(0xFFD63030).copy(alpha = 0.9f * alpha), Offset(hw * 0.06f, -hl * 0.92f), Size(hw * 0.10f, hl * 1.84f), CornerRadius(5f))
-                    for (i in 0..3) {
-                        drawRoundRect(Color(0xFF161A21).copy(alpha = 0.8f * alpha), Offset(-hw * 0.40f + i * hw * 0.26f, hl * 0.80f), Size(hw * 0.08f, hl * 0.12f), CornerRadius(2f))
-                    }
-                }
-
-                VehicleSkin.CLASSIC -> {
-                    // chrome bumpers + tail-fin lamps
-                    drawRoundRect(Color(0xFFEDF1F6).copy(alpha = 0.95f * alpha), Offset(-hw * 0.95f, -hl * 0.96f), Size(hw * 1.9f, hl * 0.10f), CornerRadius(5f))
-                    drawRoundRect(Color(0xFFEDF1F6).copy(alpha = 0.95f * alpha), Offset(-hw * 0.95f, hl * 0.86f), Size(hw * 1.9f, hl * 0.10f), CornerRadius(5f))
-                    drawOval(Color(0xFFFFD93D).copy(alpha = alpha), Offset(-hw * 0.99f, -hl * 0.5f), Size(10f, 12f))
-                    drawOval(Color(0xFFFFD93D).copy(alpha = alpha), Offset(hw * 0.89f, -hl * 0.5f), Size(10f, 12f))
-                }
-
-                VehicleSkin.MEGA -> {
-                    // gold coach trim + destination crown
-                    drawRoundRect(Color(0xFFFFD93D).copy(alpha = 0.9f * alpha), Offset(-hw * 0.95f, hl * 0.30f), Size(hw * 1.9f, hl * 0.08f), CornerRadius(3f))
-                    drawRoundRect(Color(0xFFFFD93D).copy(alpha = 0.9f * alpha), Offset(-hw * 0.95f, -hl * 0.34f), Size(hw * 1.9f, hl * 0.08f), CornerRadius(3f))
-                    drawCircle(Color(0xFFFFD93D).copy(alpha = alpha), radius = 7f, center = Offset(0f, -hl * 0.52f))
-                    drawCircle(Color(0xFFB8860B).copy(alpha = alpha), radius = 4f, center = Offset(0f, -hl * 0.52f))
-                }
-
-                VehicleSkin.MINI -> {
-                    // rally roof flag + checkered tailband
-                    drawRoundRect(Color(0xFF23262E).copy(alpha = alpha), Offset(0f, -hl * 0.64f), Size(2.5f, hl * 0.34f), CornerRadius(1f))
-                    val flag = Path().apply {
-                        moveTo(2f, -hl * 0.64f)
-                        lineTo(hw * 0.34f, -hl * 0.56f)
-                        lineTo(2f, -hl * 0.44f)
-                        close()
-                    }
-                    drawPath(flag, Color(0xFFFF4757).copy(alpha = alpha))
-                    for (i in 0..3) {
-                        drawRect(
-                            if (i % 2 == 0) Color(0xFF23262E).copy(alpha = alpha) else Color.White.copy(alpha = 0.9f * alpha),
-                            Offset(-hw * 0.32f + i * hw * 0.16f, hl * 0.78f),
-                            Size(hw * 0.16f, hl * 0.10f),
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // ------------------------------------------------------------ v3.3 queue-paint ghosts
-
-    /**
-     * Ghost ticket above every parked ride: how many of the still-needed seats
-     * the VISIBLE queue front can fill right now (colored segment) vs how many
-     * are stranded behind the curtain (gray segment) — the "keep queue paint
-     * next to parked car color" cue, live for every parked car.
-     */
-    fun DrawScope.drawQueuePaintGhosts(engine: GameEngine) {
-        if (engine.result !in listOf(GameResult.PLAYING, GameResult.WON)) return
-        for (car in engine.cars) {
-            if (car.phase != CarPhase.PARKED || !car.revealed) continue
-            val need = car.type.seats - car.seatsFilled
-            if (need <= 0) continue
-            val (front, _) = engine.queueFillInfo(car.color)
-            val fillNow = min(need, front)
-            val pending = need - fillNow
-            if (fillNow <= 0 && pending <= 0) continue
-
-            val chipW = 118f
-            val chipH = 40f
-            val chipX = (car.x - chipW / 2f).coerceIn(12f, Dim.VW - chipW - 12f)
-            val chipY = Dim.ARENA_TOP - 64f
-            // bubble + tail pointing down to the parked car
-            drawRoundRect(
-                Color.White.copy(alpha = 0.92f),
-                Offset(chipX, chipY),
-                Size(chipW, chipH),
-                CornerRadius(12f),
-            )
-            drawRoundRect(
-                Color(0xFF3A2F23).copy(alpha = 0.35f),
-                Offset(chipX, chipY),
-                Size(chipW, chipH),
-                CornerRadius(12f),
-                style = Stroke(2.5f),
-            )
-            val tail = Path().apply {
-                moveTo(car.x - 10f, chipY + chipH)
-                lineTo(car.x + 10f, chipY + chipH)
-                lineTo(car.x, chipY + chipH + 14f)
-                close()
-            }
-            drawPath(tail, Color.White.copy(alpha = 0.92f))
-            // color dot + front count (green when it can fully fill)
-            drawCircle(car.color.body, radius = 9f, center = Offset(chipX + 20f, chipY + chipH / 2f))
-            drawCircle(car.color.deep, radius = 9f, center = Offset(chipX + 20f, chipY + chipH / 2f), style = Stroke(2f))
-            if (fillNow > 0) {
-                outlinedText(
-                    "x$fillNow",
-                    chipX + 52f,
-                    chipY + chipH / 2f,
-                    26f,
-                    if (pending == 0) Color(0xFF1FA94F) else Color(0xFF2E7CC4),
-                    Color.White,
-                )
-            }
-            if (pending > 0) {
-                outlinedText(
-                    "+$pending",
-                    chipX + chipW - 22f,
-                    chipY + chipH / 2f,
-                    24f,
-                    Color(0xFF98A4B3),
-                    Color.White,
-                )
             }
         }
     }

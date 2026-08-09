@@ -44,25 +44,14 @@ object LevelGenerator {
     private val placeR get() = Dim.ARENA_RIGHT - Dim.ARENA_PAD
     private val placeB get() = Dim.ARENA_BOTTOM - Dim.ARENA_PAD
 
-    fun generate(level: Int, mysteryBoost: Int = 0, manualScene: String? = null, specialDay: Boolean = false): LevelSpec {
+    fun generate(level: Int, mysteryBoost: Int = 0): LevelSpec {
         // Maps + layouts keep unlocking as you climb: new themes join the
         // rotation at their minLevel, so the game keeps feeling fresh. HEAP is
-        // in the pool twice — the dumped-pile board is the signature look; the
-        // v3.3 OTHER ring board gets a double ticket too once it unlocks.
-        val unlocked = LevelTheme.entries.filter { level >= it.minLevel }
-        val themePool = unlocked.toMutableList()
-        // hero days: the EVENT hero map leaks into the pool on special live-ops days
-        if (specialDay && level >= LevelTheme.EVENT.minLevel && !themePool.contains(LevelTheme.EVENT)) {
-            themePool.add(LevelTheme.EVENT)
-        }
+        // in the pool twice — the dumped-pile board is the signature look.
+        val themePool = LevelTheme.entries.filter { level >= it.minLevel }
         val styleBase = LayoutStyle.entries.filter { level >= it.minLevel }
-        val stylePool = styleBase.toMutableList().apply {
-            if (contains(LayoutStyle.HEAP)) add(LayoutStyle.HEAP)
-            if (contains(LayoutStyle.OTHER)) add(LayoutStyle.OTHER)
-        }
-        // style-aware scene: the shop's manual pick pins the board to that map
-        val manual = manualScene?.let { name -> unlocked.firstOrNull { it.name == name } }
-        val theme = manual ?: themePool[(level - 1) % themePool.size]
+        val stylePool = if (styleBase.contains(LayoutStyle.HEAP)) styleBase + LayoutStyle.HEAP else styleBase
+        val theme = themePool[(level - 1) % themePool.size]
         val style = stylePool[(level - 1) % stylePool.size]
         val slotCount = when {
             level <= 2 -> 4
@@ -371,39 +360,8 @@ object LevelGenerator {
 
             LayoutStyle.DISC -> return scatterCandidate(type, rng)
             LayoutStyle.HEAP -> return heapCandidate(type, rng)
-            LayoutStyle.OTHER -> return otherCandidate(type, rng)
+            LayoutStyle.OTHER -> return heapCandidate(type, rng)
         }
-    }
-
-    /**
-     * v3.3 "other" layouts: round-the-plaza boards. Cars park along two
-     * concentric boulevard rings (mostly tangential like a traffic circle,
-     * some radial outliers for texture) — the circle-jam look that shows up
-     * past L20.
-     */
-    private fun otherCandidate(type: CarType, rng: Random): Vec3 {
-        val cx = (placeL + placeR) / 2f
-        val cy = (placeT + placeB) / 2f
-        val rx = (placeR - placeL) / 2f - 30f
-        val ry = (placeB - placeT) / 2f - 30f
-        val a = rng.nextFloat() * (2f * Math.PI.toFloat())
-        // two ring bands + a softer inner scatter so the plaza stays busy
-        val ring = rng.nextFloat()
-        val rad = when {
-            ring < 0.42f -> 0.68f + (rng.nextFloat() - 0.5f) * 0.06f
-            ring < 0.84f -> 0.94f + (rng.nextFloat() - 0.5f) * 0.06f
-            else -> kotlin.math.sqrt(rng.nextFloat()) * 0.5f
-        }
-        val x = cx + cos(a) * rx * kotlin.math.min(rad, 1f)
-        val y = cy + sin(a) * ry * kotlin.math.min(rad, 1f)
-        // tangential to the ring (traffic-circle feel) with jitter; a few radial
-        val tangent = Math.toDegrees(Math.atan2((y - cy).toDouble(), (x - cx).toDouble())).toFloat() + 90f
-        val angle = if (rng.nextFloat() < 0.80f) {
-            tangent + (if (rng.nextFloat() < 0.5f) 180f else 0f) + (rng.nextFloat() - 0.5f) * 22f
-        } else {
-            (floor(rng.nextFloat() * 8f) * 45f) + (rng.nextFloat() - 0.5f) * 8f
-        }
-        return Vec3(x, y, (angle + 360f) % 360f)
     }
 
     /**

@@ -379,50 +379,6 @@ class GameEngine(
         return true
     }
 
-    /** How many of [color] wait at the visible front vs total still queued — feeds the v3.3 queue-paint ghost badges. */
-    fun queueFillInfo(color: CarColor): IntArray {
-        val front = waiting.count { it.color == color }
-        val total = front + backlog.count { it == color }
-        return intArrayOf(front, total)
-    }
-
-    /**
-     * Queue Refresh (v3.3 starter booster): full chaos reshuffle — every
-     * colour whose car still sits inside (revealed) bubbles to the visible
-     * front, the rest gets shuffled behind. Counts are preserved exactly,
-     * so the level can never deadlock from a refresh.
-     */
-    fun chaosRefresh(): Boolean {
-        if (result != GameResult.PLAYING) return false
-        val pool = waiting.map { it.color } + backlog
-        if (pool.size < 2) return false
-        val need = LinkedHashSet<CarColor>()
-        for (c in cars) {
-            if (c.inArena && c.revealed) need.add(c.color)
-        }
-        val needPart = pool.filter { need.contains(it) }
-        val restPart = pool.filter { !need.contains(it) }.shuffled(rng)
-        val ordered = needPart + restPart
-        waiting.clear()
-        backlog.clear()
-        val vis = ordered.take(Dim.MAX_VISIBLE_QUEUE)
-        val rest = ordered.drop(vis.size)
-        for (col in vis) {
-            waiting.add(PassengerEnt(col).apply {
-                x = Dim.QUEUE_X0
-                y = Dim.QUEUE_Y
-            })
-        }
-        backlog.addAll(rest)
-        waiting.forEachIndexed { i, p ->
-            p.tx = Dim.QUEUE_X0 + i * Dim.QUEUE_GAP
-            p.popStart = ms
-        }
-        lastActionMs = ms
-        onFx(Fx.SHUFFLE)
-        return true
-    }
-
     // ------------------------------------------------------------ flow
 
     private fun startExit(car: CarEnt) {

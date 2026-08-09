@@ -283,37 +283,19 @@ class Prefs(context: Context) {
         // v3.0 avatar frames: union-merge unlocks (never lose a paid frame)
         val cFrames = s.optString("frames", "")
             .split(',')
-            .mapNotNull { it.trim().substringBefore(':').toIntOrNull() }
+            .mapNotNull { it.trim().toIntOrNull() }
             .filter { it in 0..99 }
             .toSet()
         if (cFrames.isNotEmpty()) {
             val mergedF = ownedFrames.value + cFrames
             if (mergedF != ownedFrames.value) {
                 ownedFrames.value = mergedF
-                // server stores plain ids; keep any local source tags we know, cloud wins on ids
                 sp.edit().putString(KEY_FRAMES, mergedF.joinToString(",")).apply()
                 raised = true
             }
             val cFrameSel = s.optInt("frameSel", -1)
             if (cFrameSel in 0..99 && mergedF.contains(cFrameSel) && cFrameSel != avatarFrame.intValue) {
                 selectFrame(cFrameSel)
-                raised = true
-            }
-        }
-        // v3.3 scene + pack flags ride the same cloud save
-        if (s.has("vehPack")) {
-            if (s.optBoolean("vehPack", false)) {
-                if (!hasVehiclePack.value) {
-                    grantVehiclePack()
-                    raised = true
-                }
-            }
-        }
-        if (s.has("scene")) {
-            val cScene = s.optString("scene", "")
-            val theme = if (cScene.isEmpty()) null else runCatching { LevelTheme.valueOf(cScene) }.getOrNull()
-            if (theme != null && theme.name != manualScene.value && maxLevel.intValue >= theme.minLevel) {
-                setManualScene(theme.name)
                 raised = true
             }
         }
@@ -341,13 +323,6 @@ class Prefs(context: Context) {
         if (cElim in 0..99 && cElim > elims.intValue) {
             elims.intValue = cElim
             sp.edit().putInt(KEY_ELIMS, cElim).apply()
-            raised = true
-        }
-        // boosters: refreshes join the belt ledger as well (v3.3)
-        val cRefre = s.optInt("refreshes", -1)
-        if (cRefre in 0..99 && cRefre > refreshes.intValue) {
-            refreshes.intValue = cRefre
-            sp.edit().putInt(KEY_REFRESHES, cRefre).apply()
             raised = true
         }
         val cPiggy = s.optInt("piggy", -1)
@@ -526,44 +501,6 @@ class Prefs(context: Context) {
     }
 
     /** Piggy bank: fills with level wins, breakable via the Play Store purchase. */
-    // v3.3: queue refresh booster (safe chaos reshuffle — never deadlocks)
-    var refreshes = mutableIntStateOf(sp.getInt(KEY_REFRESHES, 1))
-        private set
-
-    fun addRefreshes(n: Int) {
-        val v = (refreshes.intValue + n).coerceIn(0, 99)
-        refreshes.intValue = v
-        sp.edit().putInt(KEY_REFRESHES, v).apply()
-    }
-
-    fun useRefresh(): Boolean {
-        if (refreshes.intValue <= 0) return false
-        addRefreshes(-1)
-        return true
-    }
-
-    /** One-time v3.3 Skin-Shop welcome starter: Sprinter frame + wallet boosts. */
-    fun grantSkinsWelcomeIfNeeded(): Boolean {
-        if (sp.getBoolean(KEY_SKINS_WELCOME, false)) return false
-        sp.edit().putBoolean(KEY_SKINS_WELCOME, true).apply()
-        unlockFrame(1, "c")
-        addCoins(100)
-        addShuffles(1)
-        addRefreshes(1)
-        return true
-    }
-
-    // frame watch-ad strip progress (v3.3 Meow Squad frame)
-    var frameAdWatches = mutableIntStateOf(sp.getInt(KEY_FRAME_ADS, 0))
-        private set
-
-    fun noteFrameAdWatch(): Int {
-        val v = (frameAdWatches.intValue + 1).coerceIn(0, 99)
-        frameAdWatches.intValue = v
-        sp.edit().putInt(KEY_FRAME_ADS, v).apply()
-        return v
-    }
-
     var piggy = mutableIntStateOf(sp.getInt(KEY_PIGGY, 0))
         private set
 
@@ -590,56 +527,16 @@ class Prefs(context: Context) {
     var ownedFrames = mutableStateOf<Set<Int>>(
         (sp.getString(KEY_FRAMES, "0") ?: "0")
             .split(',')
-            .mapNotNull { it.trim().substringBefore(':').toIntOrNull() }
+            .mapNotNull { it.trim().toIntOrNull() }
             .toSet() + 0,
     )
         private set
 
-    /** v3.3: frame ownership carries a source tag (`id:src`, src = u/c/g/e/w/a) so the Info dialog can group them. */
-    private fun frameSources(): Map<Int, String> =
-        (sp.getString(KEY_FRAMES, "0") ?: "0")
-            .split(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .associate { entry ->
-                val id = entry.substringBefore(':').toIntOrNull() ?: 0
-                val src = entry.substringAfter(':', "u")
-                id to src
-            }
-
-    /** Frames earned through one source: c=shop(coins) g=gems u=level e=event w=weekly a=ads. */
-    fun framesOf(src: String): List<Int> =
-        frameSources().filter { it.value == src }.keys.sorted()
-
-    /** Tagged csv (what we persist + send to the cloud): "0:u,1:c,2:g". */
-    fun framesTaggedCsv(): String =
-        ownedFrames.value.joinToString(",") { id -> "$id:" + (frameSources()[id] ?: "u") }
-
-    /**
-     * Structured inventory the Save-loop mirrors 1:1 (keeps Profile + shop +
-     * save-loop all reading the same ledger).
-     */
-    data class Inventory(
-        val framesOwned: Int,
-        val framesBySource: Map<String, List<Int>>,
-        val ridesOwned: Int,
-        val activeFrame: Int,
-        val activeRide: String,
-    )
-
-    fun inventory(): Inventory = Inventory(
-        framesOwned = ownedFrames.value.size,
-        framesBySource = frameSources().entries.groupBy({ it.value }, { it.key }).mapValues { it.value.sorted() },
-        ridesOwned = ownedRides.value.size,
-        activeFrame = avatarFrame.intValue,
-        activeRide = selectedRide.value,
-    )
-
-    fun unlockFrame(id: Int, source: String = "u") {
+    fun unlockFrame(id: Int) {
         if (ownedFrames.value.contains(id)) return
         val v = ownedFrames.value + id
         ownedFrames.value = v
-        sp.edit().putString(KEY_FRAMES, v.joinToString(",") { "$it:" + (frameSources()[it] ?: source) }).apply()
+        sp.edit().putString(KEY_FRAMES, v.joinToString(",")).apply()
     }
 
     var avatarFrame = mutableIntStateOf(sp.getInt(KEY_FRAME, 0))
@@ -650,44 +547,6 @@ class Prefs(context: Context) {
         avatarFrame.intValue = id
         sp.edit().putInt(KEY_FRAME, id).apply()
     }
-
-    // ---------------------------------------------------------------- v3.3 skin shop state
-
-    /** Manually picked scene (theme name) or null when Auto Switch is on. */
-    var manualScene = mutableStateOf(sp.getString(KEY_SCENE, null))
-        private set
-
-    var autoSceneSwitch = mutableStateOf(sp.getBoolean(KEY_SCENE_AUTO, true))
-        private set
-
-    fun setManualScene(theme: String?) {
-        manualScene.value = theme
-        autoSceneSwitch.value = theme == null
-        sp.edit()
-            .putString(KEY_SCENE, theme)
-            .putBoolean(KEY_SCENE_AUTO, theme == null)
-            .apply()
-    }
-
-    fun setAutoScene(on: Boolean) {
-        autoSceneSwitch.value = on
-        if (on) {
-            manualScene.value = null
-            sp.edit().remove(KEY_SCENE).apply()
-        }
-        sp.edit().putBoolean(KEY_SCENE_AUTO, on).apply()
-    }
-
-    /** Vehicle pack (cars bundle) — one-time coin purchase opening the PACKS lane. */
-    var hasVehiclePack = mutableStateOf(sp.getBoolean(KEY_VEH_PACK, false))
-        private set
-
-    fun grantVehiclePack() {
-        hasVehiclePack.value = true
-        sp.edit().putBoolean(KEY_VEH_PACK, true).apply()
-    }
-
-    /** Weekly-winners frame ownership flows through [unlockFrame] with source "w"; event frames use "e". */
 
     fun setRemoveAds(owned: Boolean) {
         removeAds.value = owned
@@ -796,12 +655,6 @@ class Prefs(context: Context) {
         private const val KEY_PIGGY = "piggy_bank_fill"
         private const val KEY_FRAME = "avatar_frame"
         private const val KEY_FRAMES = "avatar_frames_owned"
-        private const val KEY_SCENE = "scene_manual"
-        private const val KEY_SCENE_AUTO = "scene_auto"
-        private const val KEY_VEH_PACK = "veh_pack_owned"
-        private const val KEY_REFRESHES = "refresh_stock"
-        private const val KEY_FRAME_ADS = "frame_ad_watches"
-        private const val KEY_SKINS_WELCOME = "skins_welcome_v33"
         private const val KEY_BOOST_GIFT = "boost_gift_v27"
         private const val KEY_RIDES = "owned_rides"
         private const val KEY_RIDE_SEL = "selected_ride"

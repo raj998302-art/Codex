@@ -123,14 +123,7 @@ fun GameScreen(
 
     val activeMult = if (practice) 0f else event.coinMult
     val winBonus = (40 * activeMult).toInt()
-    val spec = remember(level, attempt) {
-        LevelGenerator.generate(
-            level,
-            mysteryBoost = if (practice) 0 else event.mysteryBoost,
-            manualScene = prefs.manualScene.value,
-            specialDay = !practice && event.isSpecial(),
-        )
-    }
+    val spec = remember(level, attempt) { LevelGenerator.generate(level, mysteryBoost = if (practice) 0 else event.mysteryBoost) }
     val engine = remember(level, attempt) {
         GameEngine(
             spec = spec,
@@ -387,24 +380,6 @@ fun GameScreen(
             )
             SpacerW(8.dp)
             BoostChip(
-                kind = GameIconKind.REFRESH,
-                count = prefs.refreshes.intValue,
-                armed = false,
-                onClick = {
-                    when {
-                        prefs.refreshes.intValue > 0 && result == GameResult.PLAYING -> {
-                            if (engine.chaosRefresh()) prefs.useRefresh()
-                        }
-
-                        else -> {
-                            showBoostShop = true
-                            sound.tap()
-                        }
-                    }
-                },
-            )
-            SpacerW(8.dp)
-            BoostChip(
                 kind = GameIconKind.SHUFFLE,
                 count = prefs.shufflesStock.intValue,
                 armed = false,
@@ -529,13 +504,11 @@ private fun BoostChip(
     val top = when (kind) {
         GameIconKind.HAMMER -> Color(0xFF6FB6FF)
         GameIconKind.ELIMINATE -> Color(0xFFB983F5)
-        GameIconKind.REFRESH -> Color(0xFF6FEE85)
         else -> Color(0xFF5FE8DC)
     }
     val bottom = when (kind) {
         GameIconKind.HAMMER -> Color(0xFF2E5FBB)
         GameIconKind.ELIMINATE -> Color(0xFF6D28B8)
-        GameIconKind.REFRESH -> Color(0xFF1FA94F)
         else -> Color(0xFF0E9E94)
     }
     Box(

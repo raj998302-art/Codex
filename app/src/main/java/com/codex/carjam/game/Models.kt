@@ -197,6 +197,8 @@ data class LevelSpec(
     val gateNeed: Int = 0,
     /** Extra parking slots shown locked; buyable with coins or a rewarded ad. */
     val lockedSlots: Int = 0,
+    /** Layout actually used to scatter the playable cars (extras round to OTHER own plazas). */
+    val style: LayoutStyle = layout,
 ) {
     val totalPassengers: Int get() = queue.size
 }

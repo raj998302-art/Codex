@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Dim
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.Fx
@@ -77,7 +78,10 @@ fun GameScreen(
                 Fx.WIN -> {
                     sound.win()
                     if (practice) prefs.recordPractice() else prefs.recordWin()
-                    if (!practice) LiveBoard.sync(prefs, force = true)
+                    if (!practice) {
+                        LiveBoard.sync(prefs, force = true)
+                        CloudSave.sync(prefs, force = true)
+                    }
                 }
 
                 Fx.LOSE -> {

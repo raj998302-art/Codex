@@ -107,6 +107,24 @@ object LeaderboardApi {
         }
     }
 
+    /**
+     * Cloud save: pushes our snapshot; the server clamps it (absolute caps +
+     * per-hour growth budget) and returns the canonical state to merge back.
+     */
+    fun pushSave(key: String, deviceId: String, state: JSONObject, cb: ((JSONObject?) -> Unit)?) {
+        val body = JSONObject()
+            .put("key", key)
+            .put("deviceId", deviceId)
+            .put("state", state)
+        request("POST", "/api/save", body) { j ->
+            if (j == null || !j.optBoolean("ok")) {
+                cb?.invoke(null)
+                return@request
+            }
+            cb?.invoke(j.optJSONObject("state"))
+        }
+    }
+
     private fun entry(j: JSONObject) = Entry(
         rank = j.optInt("rank"),
         name = j.optString("name", "Racer"),

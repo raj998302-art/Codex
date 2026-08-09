@@ -167,7 +167,7 @@ fun SplashScreen(
             }
             Spacer(Modifier.height(16.dp))
             BasicText(
-                "CODEX GAMES  •  v2.3",
+                "CODEX GAMES  •  v2.4",
                 style = TextStyle(color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
             )
             Spacer(Modifier.height(30.dp))

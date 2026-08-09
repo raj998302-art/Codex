@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.R
+import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.LiveBoard
@@ -239,7 +240,17 @@ fun ShopDialog(
                 )
             }
             SpacerH(8.dp)
-            SquishyButton("CLOSE", onClick = onClose, top = Color(0xFF9AA5B1), bottom = Color(0xFF6E7883), height = 46.dp, textSize = 15.dp)
+            SquishyButton(
+                "CLOSE",
+                onClick = {
+                    CloudSave.sync(prefs, force = true)
+                    onClose()
+                },
+                top = Color(0xFF9AA5B1),
+                bottom = Color(0xFF6E7883),
+                height = 46.dp,
+                textSize = 15.dp,
+            )
             SpacerH(4.dp)
         }
     }
@@ -413,7 +424,7 @@ fun LeaderboardDialog(prefs: Prefs, onClose: () -> Unit) {
                                 if (com.codex.carjam.game.LeaderboardApi.CONFIGURED) {
                                     "Couldn't reach the leaderboard server — check your internet and tap REFRESH."
                                 } else {
-                                    "Your stats are saved on this device. Once the leaderboard server is live (see README), real players race you here in real time."
+                                    "Your stats are saved on this device. Real players will race you here once the server connects."
                                 },
                                 style = TextStyle(color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center),
                             )

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codex.carjam.game.CarColor
 import com.codex.carjam.game.CarType
+import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.DailyRewards
 import com.codex.carjam.game.Events
 import com.codex.carjam.game.LevelTheme
@@ -97,6 +98,7 @@ fun HomeScreen(
         if (online) {
             activity?.let { pgs.silentCheck(it) }
             LiveBoard.sync(prefs)
+            CloudSave.sync(prefs)
         }
     }
     // live-ops popup: pitch today's event once per day (after onboarding)
@@ -339,7 +341,7 @@ fun HomeScreen(
         if (showDaily) {
             DailyRewardDialog(
                 prefs = prefs,
-                onClaimed = { sound.coin() },
+                onClaimed = { sound.coin(); CloudSave.sync(prefs, force = true) },
                 onClose = { showDaily = false },
             )
         }

@@ -20,20 +20,29 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codex.carjam.R
+import com.codex.carjam.game.CloudSave
 import com.codex.carjam.game.Prefs
 import com.codex.carjam.game.render.GameIconKind
 
@@ -92,7 +101,66 @@ fun SettingsDialog(
             SpacerH(10.dp)
             ToggleRow("Sound FX", prefs.soundOn.value) { prefs.setSound(it) }
             ToggleRow("Vibration", prefs.vibrateOn.value) { prefs.setVibrate(it) }
-            SpacerH(14.dp)
+
+            // ---- cloud save (progress, coins & gems backed up to MongoDB)
+            SpacerH(6.dp)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .background(
+                            when (CloudSave.status.value) {
+                                true -> Color(0xFF3DDC5F)
+                                false -> Color(0xFFC2B49A)
+                                null -> Color(0xFFFFC93C)
+                            },
+                            CircleShape,
+                        ),
+                )
+                SpacerW(8.dp)
+                BasicText(
+                    "CLOUD SAVE — " + when (CloudSave.status.value) {
+                        true -> "progress backed up"
+                        false -> "offline, will retry"
+                        null -> "syncing…"
+                    },
+                    style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 12.5.sp, fontWeight = FontWeight.Bold),
+                )
+            }
+            SpacerH(6.dp)
+            var showCode by remember { mutableStateOf(false) }
+            var showRestore by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SquishyButton(
+                    "MY SYNC CODE",
+                    onClick = { showCode = true },
+                    modifier = Modifier.weight(1f),
+                    top = Color(0xFF6FB6FF),
+                    bottom = Color(0xFF3B7FE0),
+                    height = 40.dp,
+                    textSize = 12.dp,
+                )
+                SquishyButton(
+                    "RESTORE SAVE",
+                    onClick = { showRestore = true },
+                    modifier = Modifier.weight(1f),
+                    top = Color(0xFFFFB340),
+                    bottom = Color(0xFFE07F00),
+                    height = 40.dp,
+                    textSize = 12.dp,
+                )
+            }
+            if (showCode) {
+                SyncCodeDialog(prefs = prefs, onClose = { showCode = false })
+            }
+            if (showRestore) {
+                RestoreSaveDialog(prefs = prefs, onClose = { showRestore = false })
+            }
+            SpacerH(10.dp)
             SquishyButton("RESUME", onClick = onResume)
             SpacerH(10.dp)
             if (showRestart) {
@@ -272,6 +340,148 @@ fun LevelSelectDialog(maxLevel: Int, onPick: (Int) -> Unit, onClose: () -> Unit)
             SpacerH(14.dp)
             SquishyButton("CLOSE", onClick = onClose)
             SpacerH(4.dp)
+        }
+    }
+}
+
+/** Shows the account key (copyable) — the key IS the account, so warn first. */
+@Composable
+private fun SyncCodeDialog(prefs: Prefs, onClose: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    val pretty = prefs.syncKey.chunked(4).joinToString(" ")
+    DialogOverlay {
+        PanelCard {
+            DialogTitle("MY SYNC CODE", fill = Color(0xFF6FB6FF), outline = Color(0xFF123A6E))
+            SpacerH(8.dp)
+            BasicText(
+                "Ye code hi tumharra account hai — level, coins aur gems isi mein safe hain. Naye phone par RESTORE SAVE mein ye daalna. Kisi ko mat batana!",
+                style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SpacerH(12.dp)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(2.dp, Color(0xFFE3B36B), RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+            ) {
+                BasicText(
+                    pretty,
+                    style = TextStyle(color = Color(0xFF4A3826), fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
+                )
+            }
+            SpacerH(12.dp)
+            SquishyButton(
+                if (copied) "COPIED!" else "COPY CODE",
+                onClick = {
+                    clipboard.setText(AnnotatedString(prefs.syncKey))
+                    copied = true
+                },
+                top = Color(0xFF6FB6FF),
+                bottom = Color(0xFF3B7FE0),
+                height = 44.dp,
+                textSize = 14.dp,
+            )
+            SpacerH(8.dp)
+            SquishyButton(
+                "CLOSE",
+                onClick = onClose,
+                top = Color(0xFF9AA5B1),
+                bottom = Color(0xFF6E7883),
+                height = 44.dp,
+                textSize = 14.dp,
+            )
+            SpacerH(2.dp)
+        }
+    }
+}
+
+/** Paste a sync code from another device to adopt that account here. */
+@Composable
+private fun RestoreSaveDialog(prefs: Prefs, onClose: () -> Unit) {
+    var text by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    DialogOverlay {
+        PanelCard {
+            DialogTitle("RESTORE SAVE", fill = Color(0xFFFFB340), outline = Color(0xFF7A4A00))
+            SpacerH(8.dp)
+            BasicText(
+                "Apne purane phone ka sync code yahan paste karo — us account ka saara progress is device par aa jayega.",
+                style = TextStyle(color = Color(0xFF8C6A3F), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SpacerH(12.dp)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(2.dp, Color(0xFFE3B36B), RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+            ) {
+                if (text.isEmpty()) {
+                    BasicText(
+                        "paste sync code…",
+                        style = TextStyle(color = Color(0xFFBBA987), fontSize = 13.sp),
+                    )
+                }
+                BasicTextField(
+                    value = text,
+                    onValueChange = {
+                        text = it.lowercase().filter { c -> c.isLetterOrDigit() }.take(96)
+                        error = null
+                    },
+                    textStyle = TextStyle(color = Color(0xFF4A3826), fontSize = 13.sp, fontFamily = FontFamily.Monospace),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            error?.let {
+                SpacerH(6.dp)
+                BasicText(
+                    it,
+                    style = TextStyle(color = Color(0xFFD0342C), fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                )
+            }
+            SpacerH(12.dp)
+            SquishyButton(
+                if (busy) "RESTORING…" else "RESTORE THIS ACCOUNT",
+                onClick = {
+                    if (!busy) {
+                        if (!prefs.setSyncKey(text)) {
+                            error = "Code galat lag raha hai — pura code paste karo."
+                        } else {
+                            busy = true
+                            CloudSave.sync(prefs, force = true) { ok ->
+                                busy = false
+                                if (ok) {
+                                    onClose()
+                                } else {
+                                    error = "Server tak pahunch nahi paya — internet check karke retry karo."
+                                }
+                            }
+                        }
+                    }
+                },
+                height = 46.dp,
+                textSize = 14.dp,
+            )
+            SpacerH(6.dp)
+            BasicText(
+                "Cancel",
+                style = TextStyle(
+                    color = Color(0xFF8C6A3F),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClose() }
+                    .padding(vertical = 8.dp),
+            )
+            SpacerH(2.dp)
         }
     }
 }

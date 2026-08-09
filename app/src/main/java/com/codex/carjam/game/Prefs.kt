@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import org.json.JSONObject
 import java.util.UUID
 
 /**
@@ -72,6 +73,116 @@ class Prefs(context: Context) {
     /** Stable anonymous install id — only used to claim this player's leaderboard slot. */
     val deviceId: String = sp.getString(KEY_DEVICE_ID, null)
         ?: UUID.randomUUID().toString().also { sp.edit().putString(KEY_DEVICE_ID, it).apply() }
+
+    // ---------------------------------------------------------------- cloud save
+
+    /**
+     * 256-bit anonymous account key (64 hex chars). The server stores ONLY its
+     * SHA-256 hash — knowing/sharing this key is sharing the account itself,
+     * which is exactly what powers the "restore on a new phone" flow.
+     */
+    var syncKey: String = sp.getString(KEY_SYNC_KEY, null) ?: run {
+        val gen = (UUID.randomUUID().toString() + UUID.randomUUID().toString()).replace("-", "")
+        sp.edit().putString(KEY_SYNC_KEY, gen).apply()
+        gen
+    }
+        private set
+
+    fun setSyncKey(raw: String): Boolean {
+        val cleaned = raw.lowercase().filter { it.isLetterOrDigit() }
+        if (cleaned.length !in 24..128) return false
+        syncKey = cleaned
+        sp.edit().putString(KEY_SYNC_KEY, cleaned).apply()
+        return true
+    }
+
+    var lastCloudSyncMs = mutableLongStateOf(sp.getLong(KEY_CLOUD_MS, 0L))
+        private set
+
+    fun noteCloudSync() {
+        val now = System.currentTimeMillis()
+        lastCloudSyncMs.longValue = now
+        sp.edit().putLong(KEY_CLOUD_MS, now).apply()
+    }
+
+    /**
+     * MAX-merges the server-canonical snapshot into local progress. Purchases
+     * are deliberately NOT touched: the no-ads entitlement is granted only by
+     * Google Play Billing's own restore flow — the cloud can never mint it.
+     * Returns true when the cloud raised anything locally.
+     */
+    fun applyCloudRestore(s: JSONObject): Boolean {
+        var raised = false
+        val cCoins = s.optLong("coins", -1L)
+        if (cCoins > coins.intValue) {
+            val v = cCoins.coerceIn(0, MAX_COINS.toLong())
+            coins.intValue = v.toInt()
+            securedSet(KEY_COINS_S, KEY_COINS_B, v)
+            raised = true
+        }
+        val cGems = s.optLong("gems", -1L)
+        if (cGems > gems.intValue) {
+            val v = cGems.coerceIn(0, MAX_GEMS.toLong())
+            gems.intValue = v.toInt()
+            securedSet(KEY_GEMS_S, KEY_GEMS_B, v)
+            raised = true
+        }
+        val cEarned = s.optLong("totalCoinsEarned", -1L)
+        if (cEarned > totalCoinsEarned.intValue) {
+            val v = cEarned.coerceIn(0, 100_000_000L)
+            totalCoinsEarned.intValue = v.toInt()
+            securedSet(KEY_EARN_S, KEY_EARN_B, v)
+            raised = true
+        }
+        val cLevel = s.optInt("maxLevel", 0)
+        if (cLevel > maxLevel.intValue) {
+            unlockLevel(cLevel)
+            raised = true
+        }
+        val cStreak = s.optInt("dailyStreak", -1)
+        if (cStreak > dailyStreak.intValue) {
+            setDailyClaim(cStreak, s.optLong("lastClaimDay", lastClaimDay.longValue))
+            raised = true
+        }
+        val cWins = s.optInt("wins", -1)
+        if (cWins > wins.intValue) {
+            wins.intValue = cWins
+            sp.edit().putInt(KEY_WINS, cWins).apply()
+            raised = true
+        }
+        val cLosses = s.optInt("losses", -1)
+        if (cLosses > losses.intValue) {
+            losses.intValue = cLosses
+            sp.edit().putInt(KEY_LOSSES, cLosses).apply()
+            raised = true
+        }
+        val cPractice = s.optInt("practiceWins", -1)
+        if (cPractice > practiceWins.intValue) {
+            practiceWins.intValue = cPractice
+            sp.edit().putInt(KEY_PRACTICE_WINS, cPractice).apply()
+            raised = true
+        }
+        val cName = s.optString("name", "").trim()
+        if (cName.isNotEmpty() && cName != playerName) {
+            setPlayerName(cName)
+            raised = true
+        }
+        val cAvatar = s.optInt("avatarId", -1)
+        if (cAvatar in 0 until AVATAR_COUNT && cAvatar != avatarId.intValue) {
+            setAvatar(cAvatar)
+            raised = true
+        }
+        if (s.optBoolean("welcomed") && !welcomed.value) {
+            markWelcomed()
+            raised = true
+        }
+        val cRef = s.optString("referredBy", "")
+        if (referredBy.value == null && cRef.isNotEmpty()) {
+            markReferred(cRef)
+            raised = true
+        }
+        return raised
+    }
 
     /** Leaderboard rating: level progress dominates, small coin/streak flavour on top. */
     fun rating(): Int = maxLevel.intValue * 120 + totalCoinsEarned.intValue / 5 + dailyStreak.intValue * 10
@@ -262,6 +373,8 @@ class Prefs(context: Context) {
         private const val KEY_EVENT_DAY = "event_seen_day"
         private const val KEY_WELCOMED = "welcomed"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_SYNC_KEY = "sync_key"
+        private const val KEY_CLOUD_MS = "last_cloud_sync_ms"
         private const val KEY_TAMPER = "tamper_flags"
     }
 }

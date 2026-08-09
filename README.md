@@ -37,14 +37,40 @@ APK stays small and crisp at any resolution.
 | **Offline mode** | `Net` connectivity check drives an OFFLINE pill, banner/shop awareness; 100% of gameplay works without internet |
 | **AAA icon** | Generated glossy toy-car icon with adaptive, round and monochrome variants |
 
-### Honest security note
+### Security model (v2.4)
 
-Client hardening raises the bar, but **real cheat-proofing requires a backend**:
-Play Billing already verifies purchase tokens with Google servers, so purchases
-cannot be faked through the app itself. For unhackable leaderboards / cross-device
-referral crediting, add a small server (e.g. Firebase) that validates receipts and
-scores — the code is structured so `Prefs`/`Leaderboard` can be swapped to remote
-sources without touching the UI.
+Defense in depth, end to end:
+
+1. **Local wallet** — coins/gems/earnings/no-ads pass through `SecureVault`:
+   SHA-256 checksums salted per install, mirror auto-restore and a tamper counter.
+2. **Cloud save** — the whole wallet + progress (level, streaks, stats, avatar,
+   name, referrals) syncs to MongoDB through `backend/`. The account credential
+   is a **256-bit sync key** generated on first launch; the server stores only
+   its SHA-256 hash, so even a full database dump can't leak it. No emails, no
+   passwords, nothing to phish.
+3. **Server-side economy clamps** — the backend applies the same absolute caps
+   as the client PLUS per-hour growth budgets (coins ≤50k/h, gems ≤300/h,
+   level ≤30/h…). A tampered client posting 999,999,999 coins gets shrunk to a
+   plausible value, permanently.
+4. **Purchases never sync** — no-ads is granted exclusively by Google Play's
+   own restore flow (`restorePurchases`), so a forged cloud save cannot mint
+   paid content. Real purchases restore on any device via the same Google
+   account; everything else restores via the sync key.
+5. **Leaderboard** — ratings are recomputed server-side from raw components.
+6. **Transport** — HTTPS only; the MongoDB URI exists solely in Render env vars.
+
+Remaining honest caveat: on a rooted device with a repacked client, stats can
+still be inflated **within** the hourly budgets — meaningful wallet/value theft
+(fake purchases, fake leaderboard toppers, massive coins) is blocked, not the
+last few "level-ups per hour". Server-side play-pacing heuristics can tighten
+that later without client changes.
+
+### Moving to a new phone (account transfer)
+
+SETTINGS → **MY SYNC CODE** shows the account key (copy it). On the new device:
+SETTINGS → **RESTORE SAVE** → paste → the entire account (level, coins, gems,
+streak, stats) adopts onto the device. Purchases additionally restore from
+PLAY STORE (same Google account → SHOP → *Restore purchases*).
 
 ### Going live with real money
 
@@ -135,6 +161,16 @@ player's own saved stats (still zero demo bots).
 | **Backend in-repo** | `backend/` = Node + Express + Mongoose service, one-click `render.yaml` Blueprint; the MongoDB URI lives only in Render env vars, never in git or the APK |
 | **Payments simplified** | Razorpay experiment removed — everything goes through Google Play Billing (policy-safe) |
 | **Assets** | Splash art re-encoded at 1296-wide q90, hero car re-exported at 1200px transparent — retina-crisp, bigger APK allowed |
+
+## v2.4 (cloud save + hardened security)
+
+| System | What changed |
+| --- | --- |
+| **Cloud save (MongoDB)** | Level, coins, gems, streaks, wins/losses, avatar, name, referral status — everything backs up to the database and syncs on app-open, every win, every purchase-adjacent action |
+| **Sync key accounts** | 256-bit random key per install; server stores only its SHA-256 hash. SETTINGS → MY SYNC CODE / RESTORE SAVE = full account transfer to a new phone |
+| **Server economy clamps** | Per-hour growth budgets on every wallet field — fake saves get shrunk, legit speed-runs pass |
+| **Purchase isolation** | no-ads never travels through the cloud; Play Billing restore remains the only entitlement path (fake saves can't unlock paid items) |
+| **Settings UI** | CLOUD SAVE status dot (synced/offline/syncing) + sync code dialogs with copy & restore flows |
 
 ## Project layout
 
